@@ -1,0 +1,9 @@
+beautifulsoup4==4.12.3
+blinker==1.7.0
+pymongo==4.8.0
+regex==2024.5.15
+requests==2.32.3
+urllib3==2.2.2
+selenium
+selenium-wire
+webdriver-manager
