@@ -1,6 +1,8 @@
 from typing import List
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
 from crawlers.crawler import Crawler
 from bs4 import BeautifulSoup
 from datetime import date
@@ -15,12 +17,16 @@ class meta(Crawler):
     def __init__(self, job_type, location) -> None:
         super().__init__(job_type, location)
         self.METAURL = "https://www.metacareers.com/jobs/"
-        self.html_save_path = os.getenv('HTML_PATH', '/Users/harrisonli/Desktop/Go_micro_job_crawler/workers/data')
+        self.html_save_path = os.getenv('HTML_PATH', '/app/html_data')
     
     def _init_driver(self) -> None:
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        driver = webdriver.Chrome(options=options)
+        chrome_driver_path = os.getenv('WEB_DRIVER_PATH', '/usr/local/bin/chromedriver')
+        chrome_options = Options()
+        chrome_options.add_argument('--headless')
+        chrome_options.add_argument('--no-sandbox')
+        chrome_options.add_argument('--disable-dev-shm-usage')
+        service = Service(chrome_driver_path)
+        driver = webdriver.Chrome(service=service, options=chrome_options)
         driver.maximize_window()
         self.driver = driver
    
