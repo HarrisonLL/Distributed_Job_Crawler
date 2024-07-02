@@ -18,7 +18,7 @@ class amazon(Crawler):
         #self.web_driver_path = os.getenv('WEB_DRIVER_PATH', '/opt/homebrew/bin/chromedriver')
         self.web_driver_path = os.getenv('WEB_DRIVER_PATH', '/usr/local/bin/chromedriver')
         self.max_page = 2 # max page per crawling
-        self.html_save_path = os.getenv('HTML_PATH', '/Users/harrisonli/Desktop/Go_micro_job_crawler/workers/data')
+        self.html_save_path = os.getenv('HTML_PATH', '/app/html_data')
 
     def _init_driver(self) -> None:
         chrome_options = Options()
