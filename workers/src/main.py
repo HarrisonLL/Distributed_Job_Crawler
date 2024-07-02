@@ -17,10 +17,10 @@ def main(company: str, job_type: str, location: str):
     db = get_db(company)
     crawler = init_crawler(company, job_type, location)
     jobs = crawler.get_jobs()
-    print(f'{len(jobs)} Jobs Found')
+    print(f'{len(jobs)} Jobs Found', flush=True)
 
     for job in jobs:
-        print(f'Now scraping job: {job['url']}')
+        print(f'Now scraping job: {job['url']}', flush=True)
         job_id = crawler.get_job_id_by_url(job['url'])
         if not job_exists(db, job_id):
             save_job_url_to_db(db, job_id, job['url'])
