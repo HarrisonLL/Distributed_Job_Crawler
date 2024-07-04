@@ -12,3 +12,14 @@ services:
     volumes:
       - ${PWD}/mongo_data:/data/db
 
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpass
+      POSTGRES_DB: job_scheduler_db
+    volumes:
+      - ${PWD}/postgres_data:/var/lib/postgresql/data
