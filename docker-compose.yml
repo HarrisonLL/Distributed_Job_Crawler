@@ -20,6 +20,6 @@ services:
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: adminpass
-      POSTGRES_DB: job_scheduler_db
+      POSTGRES_DB: gs_db
     volumes:
       - ${PWD}/postgres_data:/var/lib/postgresql/data

@@ -1,20 +1,21 @@
 package database
 
 import (
-	"job-scheduler/models"
+	"go_services/models"
 	"log"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-// DB is the global database connection
 var DB *gorm.DB
 
-// Init initializes the database connection and migrates the schema
 func Init() {
-	// Connection string for PostgreSQL
-	dsn := "host=localhost user=youruser password=yourpassword dbname=yourdbname port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	dsn := os.Getenv("POSTGRES_URL")
+	if dsn == "" {
+		log.Fatal("POSTGRES_URL is not set!")
+	}
 	var err error
 	// Open the database connection
 	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -23,7 +24,7 @@ func Init() {
 	}
 
 	// Migrate the schema
-	if err := DB.AutoMigrate(&models.Task{}); err != nil {
+	if err := DB.AutoMigrate(&models.Task{}, &models.Company{}); err != nil {
 		log.Fatal("Failed to migrate database: ", err)
 	}
 }
