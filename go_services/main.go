@@ -15,7 +15,6 @@ import (
 )
 
 func startWeb() {
-	database.init()
 	router := gin.Default()
 	router.GET("/tasks", handlers.GetTasks)
 	router.POST("/tasks", handlers.CreateTask)
@@ -82,6 +81,7 @@ func startScheduler() {
 }
 
 func main() {
+	database.Init()
 	go startWeb()
 	go startScheduler()
 	// Keep the main function running to allow the goroutines to execute

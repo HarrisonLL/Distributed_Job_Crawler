@@ -1,4 +1,4 @@
-module scheduler
+module go_services
 
 go 1.21.1
 
