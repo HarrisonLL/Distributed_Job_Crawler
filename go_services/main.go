@@ -52,6 +52,7 @@ func startScheduler() {
 			taskID := uuid.New().String()
 			envVars := []string{
 				fmt.Sprintf("TASKID=%s", taskID),
+				fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
 			}
 			htmlPath := os.Getenv("HTML_PATH")
 			volumeMappings := []string{
