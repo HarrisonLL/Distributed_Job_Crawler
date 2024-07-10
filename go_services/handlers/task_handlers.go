@@ -3,8 +3,9 @@ package handlers
 import (
 	"go_services/database"
 	"go_services/models"
+	"go_services/utils"
 	"net/http"
-
+	"time"
 	"github.com/gin-gonic/gin"
 )
 
@@ -16,6 +17,17 @@ func GetTasks(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, tasks)
+}
+
+// GET request to fetch a task by ID
+func GetTaskByID(c *gin.Context) {
+	taskID := c.Param("task_id")
+	var task models.Task
+	if err := database.DB.First(&task, "task_id = ?", taskID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+	c.JSON(http.StatusOK, task)
 }
 
 // POST requests to create a new task
@@ -46,4 +58,54 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, task)
+
+	if task.Status == models.Completed {
+		go scheduleRetryTask(task)
+	}
+}
+
+
+// scheduleRetryTask schedules a retry for the failed jobs of a completed task
+func scheduleRetryTask(task models.Task) {
+	time.Sleep(1 * time.Hour)
+
+	envVars := []string{
+		fmt.Sprintf("TASKID=%s", retryTaskID),
+		fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
+	}
+	htmlPath := os.Getenv("HTML_PATH")
+	volumeMappings := []string{
+		htmlPath + ":/app/html_data",
+	}
+	cmd := []string{
+		"--job_type", task.Args["job_type"].(string),
+		"--location", task.Args["location"].(string),
+		"--company", task.Args["company"].(string),
+		"--retry=true",
+	}
+
+	// Start the crawler work for the retry task
+	containerID, err := utils.RunDockerContainer(task.Args["company"].(string), envVars, volumeMappings, cmd)
+	if err != nil {
+		log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
+	} else {
+		log.Printf("Started retry container %s for task %s", containerID, task.TaskID)
+		retryTaskID := uuid.New().String()
+		retryTask := models.Task{
+			TaskID:         retryTaskID,
+			ContainerID:    containerID,
+			DateTime:       time.Now().Format(time.RFC3339),
+			Args:           task.Args,
+			Status:         models.Started,
+			SuccessJobIDs:  []string{},
+			FailedJobIDs:   task.FailedJobIDs,
+			CompletionRate: 0.0,
+			IsRetryTask:    true,
+			ParentTaskID:   task.TaskID,
+		}
+		if err := database.DB.Create(&retryTask).Error; err != nil {
+			log.Printf("Failed to create retry task: %v", err)
+			return
+		}
+	}
 }

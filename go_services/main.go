@@ -19,6 +19,7 @@ func startWeb() {
 	router.GET("/tasks", handlers.GetTasks)
 	router.POST("/tasks", handlers.CreateTask)
 	router.PATCH("/tasks", handlers.UpdateTask)
+	router.GET("/tasks/:task_id", handlers.GetTaskByID) 
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start web server: %v", err)
 
@@ -71,7 +72,28 @@ func startScheduler() {
 					log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err)
 				} else {
 					log.Printf("Started container %s for company %s", containerID, company.CompanyName)
+					// Update task DB
+					newTask := models.Task{
+						TaskID:      taskID,
+						ContainerID: containerID,
+						DateTime:    time.Now().Format(time.RFC3339),
+						Args: models.JSONMap{
+							"job_type": "software engineer",
+							"location": "USA",
+							"company":  company.CompanyName,
+						},
+						Status:         models.Started,
+						SuccessJobIDs:  []string{},
+						FailedJobIDs:   []string{},
+						CompletionRate: 0.0,
+						IsRetryTask:    false,
+						ParentTaskID:   "",
+					}
+					if err := database.DB.Create(&task).Error; err != nil {
+						log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+					}
 				}
+
 			}(company)
 		}
 
