@@ -1,5 +1,6 @@
 <img width="878" alt="image" src="https://github.com/HarrisonLL/Distributed_Job_Crawler/assets/32115568/28876f49-7a23-4f76-bdb4-45a05f593fa2">
-System Architecture
+
+# System Architecture
 
 0. May not implement user authentication service
 
