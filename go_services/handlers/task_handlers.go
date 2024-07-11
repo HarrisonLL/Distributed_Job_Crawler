@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"fmt"
 	"go_services/database"
 	"go_services/models"
 	"go_services/utils"
+	"log"
 	"net/http"
+	"os"
 	"time"
+
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // GET requests to fetch all tasks
@@ -47,23 +52,31 @@ func CreateTask(c *gin.Context) {
 
 // PATCH requests to update an existing task
 func UpdateTask(c *gin.Context) {
+	taskID := c.Param("task_id")
 	var task models.Task
-	if err := c.ShouldBindJSON(&task); err != nil {
+
+	if err := database.DB.First(&task, "task_id = ?", taskID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
+		return
+	}
+
+	var updatedTask models.Task
+	if err := c.ShouldBindJSON(&updatedTask); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := database.DB.Model(&task).Updates(task).Error; err != nil {
+	if err := database.DB.Model(&task).Updates(updatedTask).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, task)
+
+	c.JSON(http.StatusOK, updatedTask)
 
 	if task.Status == models.Completed {
 		go scheduleRetryTask(task)
 	}
 }
-
 
 // scheduleRetryTask schedules a retry for the failed jobs of a completed task
 func scheduleRetryTask(task models.Task) {
