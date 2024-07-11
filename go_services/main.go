@@ -89,7 +89,7 @@ func startScheduler() {
 						IsRetryTask:    false,
 						ParentTaskID:   "",
 					}
-					if err := database.DB.Create(&task).Error; err != nil {
+					if err := database.DB.Create(&newTask).Error; err != nil {
 						log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
 					}
 				}

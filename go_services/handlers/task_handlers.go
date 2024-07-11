@@ -82,6 +82,8 @@ func UpdateTask(c *gin.Context) {
 func scheduleRetryTask(task models.Task) {
 	time.Sleep(1 * time.Hour)
 
+	retryTaskID := uuid.New().String()
+
 	envVars := []string{
 		fmt.Sprintf("TASKID=%s", retryTaskID),
 		fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
