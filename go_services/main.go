@@ -16,10 +16,10 @@ import (
 
 func startWeb() {
 	router := gin.Default()
-	router.GET("/tasks", handlers.GetTasks)
-	router.POST("/tasks", handlers.CreateTask)
-	router.PATCH("/tasks", handlers.UpdateTask)
-	router.GET("/tasks/:task_id", handlers.GetTaskByID) 
+	router.GET("/api/v1/tasks", handlers.GetTasks)
+	router.POST("/api/v1/tasks", handlers.CreateTask)
+	router.PATCH("/api/v1/tasks/:task_id", handlers.UpdateTask)
+	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start web server: %v", err)
 
