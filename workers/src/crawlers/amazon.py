@@ -15,7 +15,6 @@ class amazon(Crawler):
     def __init__(self, job_type, location) -> None:
         super().__init__(job_type, location)
         self.AMAZONURL = "https://www.amazon.jobs/en/"
-        #self.web_driver_path = os.getenv('WEB_DRIVER_PATH', '/opt/homebrew/bin/chromedriver')
         self.web_driver_path = os.getenv('WEB_DRIVER_PATH', '/usr/local/bin/chromedriver')
         self.max_page = 2 # max page per crawling
         self.html_save_path = os.getenv('HTML_PATH', '/app/html_data')

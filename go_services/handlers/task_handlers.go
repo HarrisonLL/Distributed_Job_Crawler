@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -35,21 +36,6 @@ func GetTaskByID(c *gin.Context) {
 	c.JSON(http.StatusOK, task)
 }
 
-// POST requests to create a new task
-func CreateTask(c *gin.Context) {
-	var task models.Task
-	if err := c.ShouldBindJSON(&task); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := database.DB.Create(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, task)
-}
-
 // PATCH requests to update an existing task
 func UpdateTask(c *gin.Context) {
 	taskID := c.Param("task_id")
@@ -66,26 +52,42 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	if err := database.DB.Model(&task).Updates(updatedTask).Error; err != nil {
+	if updatedTask.Status != 0 {
+		task.Status = updatedTask.Status
+	}
+	if updatedTask.CompletionRate != 0 {
+		task.CompletionRate = updatedTask.CompletionRate
+	}
+	if len(updatedTask.SuccessJobIDs) > 0 {
+		task.SuccessJobIDs = updatedTask.SuccessJobIDs
+	}
+	if len(updatedTask.FailedJobIDs) > 0 {
+		task.FailedJobIDs = updatedTask.FailedJobIDs
+	}
+
+	if err := database.DB.Save(&task).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, updatedTask)
+	c.JSON(http.StatusOK, task)
 
-	if task.Status == models.Completed {
+	if task.Status == models.Completed && len(task.FailedJobIDs) > 0 {
 		go scheduleRetryTask(task)
 	}
 }
 
-// scheduleRetryTask schedules a retry for the failed jobs of a completed task
 func scheduleRetryTask(task models.Task) {
+	mode := os.Getenv("MODE")
+	// Wait for 1 hour before retrying
 	time.Sleep(1 * time.Hour)
 
-	retryTaskID := uuid.New().String()
+	newTaskID := uuid.New().String()
+	args := task.Args
+	args["retry"] = true
+	args["parentTaskID"] = task.TaskID
 
 	envVars := []string{
-		fmt.Sprintf("TASKID=%s", retryTaskID),
 		fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
 	}
 	htmlPath := os.Getenv("HTML_PATH")
@@ -93,34 +95,38 @@ func scheduleRetryTask(task models.Task) {
 		htmlPath + ":/app/html_data",
 	}
 	cmd := []string{
-		"--job_type", task.Args["job_type"].(string),
-		"--location", task.Args["location"].(string),
-		"--company", task.Args["company"].(string),
 		"--retry=true",
+		fmt.Sprintf("--task_id=%s", newTaskID),
+		fmt.Sprintf("--parent_task_id=%s", task.TaskID),
 	}
 
-	// Start the crawler work for the retry task
-	containerID, err := utils.RunDockerContainer(task.Args["company"].(string), envVars, volumeMappings, cmd)
-	if err != nil {
-		log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
-	} else {
-		log.Printf("Started retry container %s for task %s", containerID, task.TaskID)
-		retryTaskID := uuid.New().String()
-		retryTask := models.Task{
-			TaskID:         retryTaskID,
-			ContainerID:    containerID,
-			DateTime:       time.Now().Format(time.RFC3339),
-			Args:           task.Args,
-			Status:         models.Started,
-			SuccessJobIDs:  []string{},
-			FailedJobIDs:   task.FailedJobIDs,
-			CompletionRate: 0.0,
-			IsRetryTask:    true,
-			ParentTaskID:   task.TaskID,
+	if mode == "docker" {
+		containerID, err := utils.RunDockerContainer(task.ContainerID, envVars, volumeMappings, cmd)
+		if err != nil {
+			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
+		} else {
+			log.Printf("Started retry container %s for task %s", containerID, task.TaskID)
+			err = database.CreateTask(newTaskID, containerID, args, true, task.TaskID)
+			if err != nil {
+				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
+			}
 		}
-		if err := database.DB.Create(&retryTask).Error; err != nil {
-			log.Printf("Failed to create retry task: %v", err)
-			return
+	} else {
+		pythonCmdDir := os.Getenv("PYTHONFILEPATH")
+		pythonCmd := exec.Command("python", "main.py",
+			"--retry=true",
+			fmt.Sprintf("--task_id=%s", newTaskID),
+			fmt.Sprintf("--parent_task_id=%s", task.TaskID))
+		pythonCmd.Env = append(os.Environ(), envVars...)
+		pythonCmd.Dir = pythonCmdDir
+		if err := pythonCmd.Start(); err != nil {
+			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
+		} else {
+			log.Printf("Started Python retry crawler for task %s", task.TaskID)
+			err = database.CreateTask(newTaskID, "", args, true, task.TaskID)
+			if err != nil {
+				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
+			}
 		}
 	}
 }

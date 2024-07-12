@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"go_services/database"
 	"go_services/handlers"
@@ -8,6 +9,7 @@ import (
 	"go_services/utils"
 	"log"
 	"os"
+	"os/exec"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -17,7 +19,6 @@ import (
 func startWeb() {
 	router := gin.Default()
 	router.GET("/api/v1/tasks", handlers.GetTasks)
-	router.POST("/api/v1/tasks", handlers.CreateTask)
 	router.PATCH("/api/v1/tasks/:task_id", handlers.UpdateTask)
 	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
 	if err := router.Run(":8080"); err != nil {
@@ -27,6 +28,7 @@ func startWeb() {
 }
 
 func startScheduler() {
+	mode := os.Getenv("MODE")
 	for {
 		var companies []models.Company
 		if err := database.DB.Find(&companies).Error; err != nil {
@@ -34,67 +36,86 @@ func startScheduler() {
 		}
 
 		for _, company := range companies {
-			imageID, err := utils.PullDockerImage(company.DockerImageName)
-			if err != nil {
-				log.Printf("Failed to pull Docker image for company %s: %v", company.CompanyName, err)
-				continue
-			}
-
-			// Update the company record with the new image ID and pull date
-			if company.DockerImageID != imageID {
-				company.DockerImageID = imageID
-				company.PullDate = time.Now().Format(time.RFC3339)
-				if err := database.DB.Save(&company).Error; err != nil {
-					log.Printf("Failed to update Docker image for company %s: %v", company.CompanyName, err)
+			if mode == "docker" {
+				imageID, err := utils.PullDockerImage(company.DockerImageName)
+				if err != nil {
+					log.Printf("Failed to pull Docker image for company %s: %v", company.CompanyName, err)
 					continue
+				}
+				if company.DockerImageID != imageID {
+					company.DockerImageID = imageID
+					company.PullDate = time.Now().Format(time.RFC3339)
+					if err := database.DB.Save(&company).Error; err != nil {
+						log.Printf("Failed to update Docker image for company %s: %v", company.CompanyName, err)
+						continue
+					}
 				}
 			}
 
 			taskID := uuid.New().String()
 			envVars := []string{
-				fmt.Sprintf("TASKID=%s", taskID),
 				fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
 			}
 			htmlPath := os.Getenv("HTML_PATH")
-			volumeMappings := []string{
-				htmlPath + ":/app/html_data",
-			}
-			cmd := []string{
-				"--job_type", "software engineer",
-				"--location", "USA",
-				"--company", company.CompanyName,
-			}
 
 			// Start the crawler work
-			go func(company models.Company) {
-				containerID, err := utils.RunDockerContainer(company.DockerImageName, envVars, volumeMappings, cmd)
-				if err != nil {
-					log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err)
-				} else {
-					log.Printf("Started container %s for company %s", containerID, company.CompanyName)
-					// Update task DB
-					newTask := models.Task{
-						TaskID:      taskID,
-						ContainerID: containerID,
-						DateTime:    time.Now().Format(time.RFC3339),
-						Args: models.JSONMap{
+			if mode == "docker" {
+				go func(company models.Company) {
+					volumeMappings := []string{
+						htmlPath + ":/app/html_data",
+					}
+					cmd := []string{
+						"--job_type", "software engineer",
+						"--location", "USA",
+						"--company", company.CompanyName,
+						"--task_id", taskID,
+					}
+					containerID, err := utils.RunDockerContainer(company.DockerImageName, envVars, volumeMappings, cmd)
+					if err != nil {
+						log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err)
+					} else {
+						log.Printf("Started container %s for company %s", containerID, company.CompanyName)
+						args := models.JSONMap{
 							"job_type": "software engineer",
 							"location": "USA",
 							"company":  company.CompanyName,
-						},
-						Status:         models.Started,
-						SuccessJobIDs:  []string{},
-						FailedJobIDs:   []string{},
-						CompletionRate: 0.0,
-						IsRetryTask:    false,
-						ParentTaskID:   "",
+						}
+						err = database.CreateTask(taskID, containerID, args, false, "")
+						if err != nil {
+							log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+						}
 					}
-					if err := database.DB.Create(&newTask).Error; err != nil {
-						log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+				}(company)
+			} else {
+				go func(company models.Company) {
+					pythonCmdDir := os.Getenv("PYTHONFILEPATH")
+					pythonCmd := exec.Command("python3", "main.py",
+						"--job_type", "software engineer",
+						"--location", "USA",
+						"--company", company.CompanyName,
+						"--task_id", taskID,
+					)
+					pythonCmd.Env = append(os.Environ(), envVars...)
+					pythonCmd.Dir = pythonCmdDir
+					var stderr bytes.Buffer
+					pythonCmd.Stderr = &stderr
+					if err := pythonCmd.Start(); err != nil {
+						log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err, stderr.String())
+					} else {
+						log.Printf("Started Python crawler for company %s", company.CompanyName)
+						args := models.JSONMap{
+							"job_type": "software engineer",
+							"location": "USA",
+							"company":  company.CompanyName,
+						}
+						err = database.CreateTask(taskID, "", args, false, "")
+						if err != nil {
+							log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+						}
 					}
-				}
+				}(company)
+			}
 
-			}(company)
 		}
 
 		// Schedule every 6 hours
