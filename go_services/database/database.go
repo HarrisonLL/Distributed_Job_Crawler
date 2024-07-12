@@ -24,7 +24,7 @@ func Init() {
 	}
 
 	// Migrate the schema
-	if err := DB.AutoMigrate(&models.Task{}, &models.Company{}); err != nil {
+	if err := DB.AutoMigrate(&models.Task{}, &models.JobType{}); err != nil {
 		log.Fatal("Failed to migrate database: ", err)
 	}
 }

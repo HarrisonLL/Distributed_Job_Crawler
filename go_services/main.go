@@ -23,30 +23,29 @@ func startWeb() {
 	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start web server: %v", err)
-
 	}
 }
 
 func startScheduler() {
 	mode := os.Getenv("MODE")
 	for {
-		var companies []models.Company
-		if err := database.DB.Find(&companies).Error; err != nil {
-			log.Fatalf("Failed to fetch companies: %v", err)
+		var jobTypes []models.JobType
+		if err := database.DB.Find(&jobTypes).Error; err != nil {
+			log.Fatalf("Failed to fetch job types: %v", err)
 		}
 
-		for _, company := range companies {
+		for _, jobType := range jobTypes {
 			if mode == "docker" {
-				imageID, err := utils.PullDockerImage(company.DockerImageName)
+				imageID, err := utils.PullDockerImage(jobType.DockerImageName)
 				if err != nil {
-					log.Printf("Failed to pull Docker image for company %s: %v", company.CompanyName, err)
+					log.Printf("Failed to pull Docker image for company %s: %v", jobType.CompanyName, err)
 					continue
 				}
-				if company.DockerImageID != imageID {
-					company.DockerImageID = imageID
-					company.PullDate = time.Now().Format(time.RFC3339)
-					if err := database.DB.Save(&company).Error; err != nil {
-						log.Printf("Failed to update Docker image for company %s: %v", company.CompanyName, err)
+				if jobType.DockerImageID != imageID {
+					jobType.DockerImageID = imageID
+					jobType.PullDate = time.Now().Format(time.RFC3339)
+					if err := database.DB.Save(&jobType).Error; err != nil {
+						log.Printf("Failed to update Docker image for company %s: %v", jobType.CompanyName, err)
 						continue
 					}
 				}
@@ -60,39 +59,39 @@ func startScheduler() {
 
 			// Start the crawler work
 			if mode == "docker" {
-				go func(company models.Company) {
+				go func(jobType models.JobType) {
 					volumeMappings := []string{
 						htmlPath + ":/app/html_data",
 					}
 					cmd := []string{
-						"--job_type", "software engineer",
+						"--job_type", jobType.JobTypeName,
 						"--location", "USA",
-						"--company", company.CompanyName,
+						"--company", jobType.CompanyName,
 						"--task_id", taskID,
 					}
-					containerID, err := utils.RunDockerContainer(company.DockerImageName, envVars, volumeMappings, cmd)
+					containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, volumeMappings, cmd)
 					if err != nil {
-						log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err)
+						log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
 					} else {
-						log.Printf("Started container %s for company %s", containerID, company.CompanyName)
+						log.Printf("Started container %s for company %s", containerID, jobType.CompanyName)
 						args := models.JSONMap{
-							"job_type": "software engineer",
+							"job_type": jobType.JobTypeName,
 							"location": "USA",
-							"company":  company.CompanyName,
+							"company":  jobType.CompanyName,
 						}
 						err = database.CreateTask(taskID, containerID, args, false, "")
 						if err != nil {
-							log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+							log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
 						}
 					}
-				}(company)
+				}(jobType)
 			} else {
-				go func(company models.Company) {
+				go func(jobType models.JobType) {
 					pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 					pythonCmd := exec.Command("python3", "main.py",
-						"--job_type", "software engineer",
+						"--job_type", jobType.JobTypeName,
 						"--location", "USA",
-						"--company", company.CompanyName,
+						"--company", jobType.CompanyName,
 						"--task_id", taskID,
 					)
 					pythonCmd.Env = append(os.Environ(), envVars...)
@@ -100,20 +99,20 @@ func startScheduler() {
 					var stderr bytes.Buffer
 					pythonCmd.Stderr = &stderr
 					if err := pythonCmd.Start(); err != nil {
-						log.Printf("Failed to start crawler for company %s: %v", company.CompanyName, err, stderr.String())
+						log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err, stderr.String())
 					} else {
-						log.Printf("Started Python crawler for company %s", company.CompanyName)
+						log.Printf("Started Python crawler for company %s", jobType.CompanyName)
 						args := models.JSONMap{
-							"job_type": "software engineer",
+							"job_type": jobType.JobTypeName,
 							"location": "USA",
-							"company":  company.CompanyName,
+							"company":  jobType.CompanyName,
 						}
 						err = database.CreateTask(taskID, "", args, false, "")
 						if err != nil {
-							log.Printf("Failed to create task for company %s: %v", company.CompanyName, err)
+							log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
 						}
 					}
-				}(company)
+				}(jobType)
 			}
 
 		}
@@ -121,7 +120,6 @@ func startScheduler() {
 		// Schedule every 6 hours
 		time.Sleep(6 * time.Hour)
 	}
-
 }
 
 func main() {
