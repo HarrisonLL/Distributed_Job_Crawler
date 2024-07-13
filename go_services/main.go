@@ -69,7 +69,7 @@ func startScheduler() {
 						"--company", jobType.CompanyName,
 						"--task_id", taskID,
 					}
-					containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, volumeMappings, cmd)
+					containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, volumeMappings, cmd, false)
 					if err != nil {
 						log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
 					} else {
@@ -111,6 +111,14 @@ func startScheduler() {
 						if err != nil {
 							log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
 						}
+						// Start a thread to wait till process finishes and release its resouce
+						go func() {
+							if err := pythonCmd.Wait(); err != nil {
+								log.Printf("Python crawler for company %s finished with error: %v", jobType.CompanyName, err)
+							} else {
+								log.Printf("Python crawler for company %s finished successfully", jobType.CompanyName)
+							}
+						}()
 					}
 				}(jobType)
 			}

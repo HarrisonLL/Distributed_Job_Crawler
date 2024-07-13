@@ -10,7 +10,9 @@ import (
 	"github.com/docker/docker/client"
 )
 
-func RunDockerContainer(image string, envVars []string, volumeMappings []string, cmd []string) (string, error) {
+// Debug allows preserve end docker container
+// So to use "docker logs <container-id>" to debug
+func RunDockerContainer(image string, envVars []string, volumeMappings []string, cmd []string, debug bool) (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", err
@@ -33,6 +35,27 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 		return "", err
 	}
 	log.Printf("Container %s started successfully\n", resp.ID)
+
+	if !debug {
+		// Start a goroutine to wait for the container to finish and then remove it
+		go func(containerID string) {
+			statusCh, errCh := cli.ContainerWait(context.Background(), containerID, container.WaitConditionNotRunning)
+			select {
+			case err := <-errCh:
+				if err != nil {
+					log.Printf("Error while waiting for container %s: %v", containerID, err)
+					return
+				}
+			case <-statusCh:
+				// Container has exited, remove it
+				if err := cli.ContainerRemove(context.Background(), containerID, types.ContainerRemoveOptions{}); err != nil {
+					log.Printf("Failed to remove container %s: %v", containerID, err)
+				} else {
+					log.Printf("Removed container %s", containerID)
+				}
+			}
+		}(resp.ID)
+	}
 	return resp.ID, nil
 }
 

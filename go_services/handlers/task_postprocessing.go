@@ -6,76 +6,12 @@ import (
 	"go_services/models"
 	"go_services/utils"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
-
-// GET requests to fetch all tasks
-func GetTasks(c *gin.Context) {
-	var tasks []models.Task
-	if err := database.DB.Find(&tasks).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, tasks)
-}
-
-// GET request to fetch a task by ID
-func GetTaskByID(c *gin.Context) {
-	taskID := c.Param("task_id")
-	var task models.Task
-	if err := database.DB.First(&task, "task_id = ?", taskID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-		return
-	}
-	c.JSON(http.StatusOK, task)
-}
-
-// PATCH requests to update an existing task
-func UpdateTask(c *gin.Context) {
-	taskID := c.Param("task_id")
-	var task models.Task
-
-	if err := database.DB.First(&task, "task_id = ?", taskID).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Task not found"})
-		return
-	}
-
-	var updatedTask models.Task
-	if err := c.ShouldBindJSON(&updatedTask); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if updatedTask.Status != 0 {
-		task.Status = updatedTask.Status
-	}
-	if updatedTask.CompletionRate != 0 {
-		task.CompletionRate = updatedTask.CompletionRate
-	}
-	if len(updatedTask.SuccessJobIDs) > 0 {
-		task.SuccessJobIDs = updatedTask.SuccessJobIDs
-	}
-	if len(updatedTask.FailedJobIDs) > 0 {
-		task.FailedJobIDs = updatedTask.FailedJobIDs
-	}
-
-	if err := database.DB.Save(&task).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, task)
-
-	if task.Status == models.Completed && len(task.FailedJobIDs) > 0 {
-		go scheduleRetryTask(task)
-	}
-}
 
 func scheduleRetryTask(task models.Task) {
 	mode := os.Getenv("MODE")
@@ -101,7 +37,7 @@ func scheduleRetryTask(task models.Task) {
 	}
 
 	if mode == "docker" {
-		containerID, err := utils.RunDockerContainer(task.ContainerID, envVars, volumeMappings, cmd)
+		containerID, err := utils.RunDockerContainer(task.ContainerID, envVars, volumeMappings, cmd, false)
 		if err != nil {
 			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
 		} else {
@@ -111,6 +47,7 @@ func scheduleRetryTask(task models.Task) {
 				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
 			}
 		}
+
 	} else {
 		pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 		pythonCmd := exec.Command("python", "main.py",
@@ -126,7 +63,16 @@ func scheduleRetryTask(task models.Task) {
 			err = database.CreateTask(newTaskID, "", args, true, task.TaskID)
 			if err != nil {
 				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
+				return
 			}
+			// Wait till process finishes and release its resouce
+			if err := pythonCmd.Wait(); err != nil {
+				log.Printf("Python crawler for task %s finished with error: %v", task.TaskID, err)
+			} else {
+				log.Printf("Python crawler for task %s finished successfully", task.TaskID)
+			}
+
 		}
+
 	}
 }
