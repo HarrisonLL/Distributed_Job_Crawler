@@ -3,6 +3,7 @@ package handlers
 import (
 	"go_services/database"
 	"go_services/models"
+	"go_services/scheduler"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -67,7 +68,7 @@ func UpdateTask(c *gin.Context) {
 
 	if task.Status == models.Completed {
 		if len(task.FailedJobIDs) > 0 {
-			go scheduleRetryTask(task)
+			go scheduler.RetryTaskScheduler(task)
 		} else {
 			// TO-DO send analyzer to do summarization
 			// Then send user email
