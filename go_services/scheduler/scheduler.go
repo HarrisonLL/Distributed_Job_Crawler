@@ -152,7 +152,7 @@ func RetryTaskScheduler(task models.Task) {
 
 	} else {
 		pythonCmdDir := os.Getenv("PYTHONFILEPATH")
-		pythonCmd := exec.Command("python", "main.py",
+		pythonCmd := exec.Command("python3", "main.py",
 			"--retry=true",
 			fmt.Sprintf("--task_id=%s", newTaskID),
 			fmt.Sprintf("--parent_task_id=%s", task.TaskID))
