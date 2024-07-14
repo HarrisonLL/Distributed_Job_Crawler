@@ -26,7 +26,7 @@ func main() {
 
 	// scheduler
 	s := gocron.NewScheduler(time.UTC)
-	s.Every(6).Hour().Do(scheduler.CrawlerTaskBase)
+	s.Every(6).Hours().Do(scheduler.CrawlerTaskBase)
 	s.StartAsync()
 
 	// web
