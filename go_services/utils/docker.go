@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"go_services/database"
 	"log"
 
 	"github.com/docker/docker/api/types"
@@ -46,8 +47,14 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 					log.Printf("Error while waiting for container %s: %v", containerID, err)
 					return
 				}
-			case <-statusCh:
-				// Container has exited, remove it
+			case status := <-statusCh:
+				if status.Error != nil {
+					log.Printf("Container %s finished with error: %v", containerID, status.Error.Message)
+					database.UpdateTaskStatus("", containerID, 3)
+				} else {
+					log.Printf("Container %s finished successfully", containerID)
+				}
+				// Remove exited container
 				if err := cli.ContainerRemove(context.Background(), containerID, types.ContainerRemoveOptions{}); err != nil {
 					log.Printf("Failed to remove container %s: %v", containerID, err)
 				} else {

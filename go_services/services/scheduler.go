@@ -1,4 +1,4 @@
-package scheduler
+package services
 
 import (
 	"bytes"
@@ -99,17 +99,20 @@ func CrawlerTaskBase() {
 					if err != nil {
 						log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
 					}
-					// Start a thread to wait till process finishes and release its resouce
+					// Start a thread to wait till process finishes and release its resource
 					go func() {
 						if err := pythonCmd.Wait(); err != nil {
 							log.Printf("Python crawler for company %s finished with error: %v", jobType.CompanyName, err)
+							DBerr := database.UpdateTaskStatus(taskID, "", models.Error)
+							if err != nil {
+								log.Printf("Failed to update task %s: %v", taskID, DBerr)
+							}
 						} else {
 							log.Printf("Python crawler for company %s finished successfully", jobType.CompanyName)
 						}
 					}()
 				}
 			}(jobType)
-
 		}
 	}
 }
@@ -150,7 +153,6 @@ func RetryTaskScheduler(task models.Task) {
 				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
 			}
 		}
-
 	} else {
 		pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 		pythonCmd := exec.Command("python3", "main.py",
@@ -170,18 +172,17 @@ func RetryTaskScheduler(task models.Task) {
 				log.Printf("Failed to create retry task for task %s: %v", task.TaskID, err)
 				return
 			}
-			// Wait till process finishes and release its resouce
+			// Wait till process finishes and release its resource
 			if err := pythonCmd.Wait(); err != nil {
 				log.Printf("Python crawler for task %s finished with error: %v", task.TaskID, err)
+				DBerr := database.UpdateTaskStatus(newTaskID, "", models.Error)
+				if DBerr != nil {
+					log.Printf("Failed to update task %s: %v", newTaskID, DBerr)
+				}
+
 			} else {
 				log.Printf("Python crawler for task %s finished successfully", task.TaskID)
 			}
-
 		}
-
 	}
 }
-
-// To-DO:
-// Add helper functions in any condition when processes ends with error
-// update db with status = 3

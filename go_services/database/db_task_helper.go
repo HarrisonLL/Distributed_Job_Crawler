@@ -25,3 +25,28 @@ func CreateTask(taskID, containerID string, args models.JSONMap, isRetry bool, p
 	}
 	return nil
 }
+
+// Update task status either by taskID or containerID
+func UpdateTaskStatus(taskID string, containerID string, status models.TaskStatus) error {
+	if taskID != "" {
+		var task models.Task
+		if err := DB.First(&task, "task_id = ?", taskID).Error; err != nil {
+			return err
+		}
+		task.Status = status
+		if err := DB.Save(&task).Error; err != nil {
+			return err
+		}
+		return nil
+	} else {
+		var task models.Task
+		if err := DB.First(&task, "container_id = ?", taskID).Error; err != nil {
+			return err
+		}
+		task.Status = status
+		if err := DB.Save(&task).Error; err != nil {
+			return err
+		}
+		return nil
+	}
+}

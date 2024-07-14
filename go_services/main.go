@@ -3,7 +3,7 @@ package main
 import (
 	"go_services/database"
 	"go_services/handlers"
-	"go_services/scheduler"
+	"go_services/services"
 	"log"
 	"time"
 
@@ -26,7 +26,7 @@ func main() {
 
 	// scheduler
 	s := gocron.NewScheduler(time.UTC)
-	s.Every(6).Hours().Do(scheduler.CrawlerTaskBase)
+	s.Every(6).Hours().Do(services.CrawlerTaskBase)
 	s.StartAsync()
 
 	// web
