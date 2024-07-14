@@ -65,6 +65,7 @@ func CrawlerTaskBase() {
 						"job_type": jobType.JobTypeName,
 						"location": "USA",
 						"company":  jobType.CompanyName,
+						"task_id":  taskID,
 					}
 					err = database.CreateTask(taskID, containerID, args, false, "")
 					if err != nil {
@@ -119,24 +120,26 @@ func RetryTaskScheduler(task models.Task) {
 	time.Sleep(1 * time.Hour)
 
 	newTaskID := uuid.New().String()
-	args := task.Args
-	args["retry"] = true
-	args["parentTaskID"] = task.TaskID
+	args := models.JSONMap{
+		"retry":          true,
+		"parent_task_id": task.TaskID,
+		"task_id":        newTaskID,
+	}
 
 	envVars := []string{
 		fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
 	}
 	htmlPath := os.Getenv("HTML_PATH")
-	volumeMappings := []string{
-		htmlPath + ":/app/html_data",
-	}
-	cmd := []string{
-		"--retry=true",
-		fmt.Sprintf("--task_id=%s", newTaskID),
-		fmt.Sprintf("--parent_task_id=%s", task.TaskID),
-	}
 
 	if mode == "docker" {
+		volumeMappings := []string{
+			htmlPath + ":/app/html_data",
+		}
+		cmd := []string{
+			"--retry=true",
+			fmt.Sprintf("--task_id=%s", newTaskID),
+			fmt.Sprintf("--parent_task_id=%s", task.TaskID),
+		}
 		containerID, err := utils.RunDockerContainer(task.ContainerID, envVars, volumeMappings, cmd, false)
 		if err != nil {
 			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
@@ -156,6 +159,8 @@ func RetryTaskScheduler(task models.Task) {
 			fmt.Sprintf("--parent_task_id=%s", task.TaskID))
 		pythonCmd.Env = append(os.Environ(), envVars...)
 		pythonCmd.Dir = pythonCmdDir
+		var stderr bytes.Buffer
+		pythonCmd.Stderr = &stderr
 		if err := pythonCmd.Start(); err != nil {
 			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
 		} else {

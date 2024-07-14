@@ -92,9 +92,9 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Job Crawler Script')
-    parser.add_argument('--job_type', type=str, required=True, help='Job type for the job search')
-    parser.add_argument('--location', type=str, required=True, help='Location for the job search')
-    parser.add_argument('--company', type=str, required=True, help='Company for the job search')
+    parser.add_argument('--job_type', type=str, help='Job type for the job search')
+    parser.add_argument('--location', type=str, help='Location for the job search')
+    parser.add_argument('--company', type=str, help='Company for the job search')
     parser.add_argument('--task_id', type=str, help='Current task id')
     parser.add_argument('--retry', type=str, help='If the task is retried task')
     parser.add_argument('--parent_task_id', type=str, help='Parent task id')
