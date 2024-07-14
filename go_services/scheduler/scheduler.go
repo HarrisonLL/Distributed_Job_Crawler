@@ -156,7 +156,7 @@ func RetryTaskScheduler(task models.Task) {
 			fmt.Sprintf("--parent_task_id=%s", task.TaskID))
 		pythonCmd.Env = append(os.Environ(), envVars...)
 		pythonCmd.Dir = pythonCmdDir
-		if err := pythonCmd.Run(); err != nil {
+		if err := pythonCmd.Start(); err != nil {
 			log.Printf("Failed to start retry crawler for task %s: %v", task.TaskID, err)
 		} else {
 			log.Printf("Started Python retry crawler for task %s", task.TaskID)
