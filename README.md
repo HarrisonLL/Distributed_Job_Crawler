@@ -25,5 +25,5 @@ go mod tidy
 - migrate db
 ```
 migrate create -ext sql -dir ./migrations/ -seq init
-migrate -database 'postgres://admin:adminpass@172.17.0.1:5432/gs_db?sslmode=disable' -path ./migrations up
+migrate -database 'postgres://admin:adminpass@localhost:5432/gs_db?sslmode=disable' -path ./migrations up
 ```
