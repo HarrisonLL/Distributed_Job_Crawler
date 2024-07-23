@@ -1,12 +1,7 @@
-<img width="878" alt="image" src="https://github.com/HarrisonLL/Distributed_Job_Crawler/assets/32115568/28876f49-7a23-4f76-bdb4-45a05f593fa2">
+
+<img width="705" alt="Screen Shot 2024-07-22 at 11 32 46 PM" src="https://github.com/user-attachments/assets/22f7cdc2-4d56-4415-8d14-bfa32ae1d020">
 
 # System Architecture
-
-0. May not implement user authentication service
-
-1. In K8S case, go service will spawn K8S pod
-
-2. If users are lot, it's better to implement a queue system to send emails. Same for Crawler works
 
 
 # Dev Notes
