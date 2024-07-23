@@ -1,0 +1,8 @@
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    job_type VARCHAR(255) NOT NULL,
+    yoe VARCHAR(10) NOT NULL,
+    company VARCHAR(255) NOT NULL
+);

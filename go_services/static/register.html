@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Be the First to Apply - Register</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+        label {
+            margin-bottom: 8px;
+            color: #555;
+        }
+        input, select, button {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Register</h1>
+        <form id="registrationForm">
+            <div id="errorContainer" class="error" style="display: none;"></div>
+            
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+            
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" required>
+            
+            <label for="jobType">Preferred Job Type</label>
+            <select id="jobType" name="jobType" required>
+                <option value="software engineer">Software Engineer</option>
+                <option value="data scientist">Data Scientist</option>
+                <option value="machine learning engineer">Machine Learning Engineer</option>
+            </select>
+            
+            <label for="yoe">Years of Experience</label>
+            <select id="yoe" name="yoe" required>
+                <option value="0-1">0-1</option>
+                <option value="1-2">1-2</option>
+                <option value="2-3">2-3</option>
+                <option value="3-5">3-5</option>
+                <option value="5+">5+</option>
+            </select>
+            
+            <label for="company">Preferred Companies</label>
+            <input type="text" id="company" name="company" required placeholder="Enter company names separated by commas">
+            <br/><br/>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('registrationForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const errorContainer = document.getElementById('errorContainer');
+            errorContainer.style.display = 'none';
+            errorContainer.innerHTML = '';
+
+            const formData = new FormData(event.target);
+            const data = {
+                username: formData.get('username'),
+                email: formData.get('email'),
+                job_type: formData.get('jobType'),
+                yoe: formData.get('yoe'),
+                company: formData.get('company')
+            };
+
+            // Basic validation
+            if (!data.username || !data.email || !data.job_type || !data.yoe || !data.company) {
+                errorContainer.style.display = 'block';
+                errorContainer.innerHTML = 'All fields are required.';
+                return;
+            }
+
+            // Email validation
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(data.email)) {
+                errorContainer.style.display = 'block';
+                errorContainer.innerHTML = 'Please enter a valid email address.';
+                return;
+            }
+            fetch('/api/v1/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Registration successful!');
+                event.target.reset();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Registration failed. Please try again.');
+            });
+        });
+    </script>
+</body>
+</html>
