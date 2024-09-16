@@ -82,9 +82,13 @@ func UpdateTask(c *gin.Context) {
 			for _, user := range users {
 				userCompanies := strings.ToLower(user.Company)
 				if user.JobType == task.Args["job_type"] && strings.Contains(userCompanies, taskCompany) {
+					if len(task.SuccessJobIDs) == 0 {
+						continue
+					}
 					emailData := map[string]interface{}{
 						"username": user.Username,
 						"email":    user.Email,
+						"company":  taskCompany,
 						"jobIDs":   task.SuccessJobIDs,
 					}
 					services.StartEmailProducer(emailData)

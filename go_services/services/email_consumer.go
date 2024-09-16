@@ -1,15 +1,56 @@
 package services
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"go_services/utils"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/streadway/amqp"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+var mongoClient *mongo.Client
+
+func initMongoDB() {
+	var err error
+	mongoURI := os.Getenv("MONGOURL")
+	mongoClient, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))
+	if err != nil {
+		log.Fatalf("Failed to connect to MongoDB: %v", err)
+	}
+}
+
+func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetail, error) {
+	collection := mongoClient.Database(fmt.Sprintf("%s_jobcrawler", strings.ToLower(company))).Collection("jobs")
+	var jobs []utils.JobDetail
+	for _, jobID := range jobIDs {
+		var job struct {
+			Title       string `bson:"title"`
+			Description string `bson:"description"`
+			URL         string `bson:"url"`
+		}
+		err := collection.FindOne(context.TODO(), bson.M{"id": jobID}).Decode(&job)
+		if err != nil {
+			log.Printf("Failed to fetch job details for jobID %s: %v", jobID, err)
+			continue
+		}
+		jobs = append(jobs, utils.JobDetail{
+			Title:       job.Title,
+			Description: job.Description,
+			URL:         job.URL,
+		})
+	}
+	return jobs, nil
+}
+
 func StartEmailConsumer() {
+	initMongoDB()
 	conn, err := amqp.Dial(os.Getenv("MQ_URL"))
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
@@ -47,45 +88,29 @@ func StartEmailConsumer() {
 		log.Fatalf("Failed to register a consumer: %v", err)
 	}
 
-	forever := make(chan bool) // Start a channel to sync goroutine threads
+	forever := make(chan bool)
 
 	go func() {
 		for d := range msgs {
-			var emailData map[string]interface{}
+			var emailData struct {
+				Username string   `json:"username"`
+				Email    string   `json:"email"`
+				JobIDs   []string `json:"jobIDs"`
+				Company  string   `json:"company"`
+			}
+
 			if err := json.Unmarshal(d.Body, &emailData); err != nil {
 				log.Printf("Failed to unmarshal message: %v", err)
 				continue
 			}
 
-			log.Printf("Received a message: %s", d.Body)
-
-			username, ok := emailData["username"].(string)
-			if !ok {
-				log.Printf("Failed to convert username")
-				continue
-			}
-			email, ok := emailData["email"].(string)
-			if !ok {
-				log.Printf("Failed to convert email")
-				continue
-			}
-			jobIDs, ok := emailData["jobIDs"].([]interface{})
-			if !ok {
-				log.Printf("Failed to convert jobIDs")
+			jobs, err := fetchJobDetailsFromMongo(emailData.JobIDs, emailData.Company)
+			if err != nil {
+				log.Printf("Failed to fetch job details from MongoDB: %v", err)
 				continue
 			}
 
-			var jobIDStrings []string
-			for _, jobID := range jobIDs {
-				jobIDStr, ok := jobID.(string)
-				if !ok {
-					log.Printf("Failed to convert jobID")
-					continue
-				}
-				jobIDStrings = append(jobIDStrings, jobIDStr)
-			}
-
-			err = utils.SendEmail(username, email, jobIDStrings)
+			err = utils.SendEmail(emailData.Username, emailData.Email, emailData.Company, jobs)
 			if err != nil {
 				log.Printf("Failed to send email: %v", err)
 			}
