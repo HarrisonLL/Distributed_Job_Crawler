@@ -38,23 +38,25 @@ func startWeb() {
 	}
 }
 
+func startScheduler() {
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(6).Hours().Do(services.CrawlerTaskBase)
+	s.StartBlocking()
+}
+
 func main() {
 	serviceMode := flag.String("service", "webScheduler", "Service mode: webScheduler, emailConsumer")
 	flag.Parse()
 
 	switch *serviceMode {
-	case "webScheduler":
+	case "web":
 		database.Init()
-		// scheduler
-		s := gocron.NewScheduler(time.UTC)
-		s.Every(6).Hours().Do(services.CrawlerTaskBase)
-		s.StartAsync()
-		// web
-		go startWeb()
-		select {}
+		startWeb()
+	case "scheduler":
+		database.Init()
+		startScheduler()
 	case "emailConsumer":
-		go services.StartEmailConsumer()
-		select {}
+		services.StartEmailConsumer()
 	default:
 		log.Fatalf("Invalid service mode: %s", *serviceMode)
 	}
