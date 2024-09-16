@@ -1,7 +1,8 @@
+The point of the project is to simulate a distributed microservice that schedules jobs and send notifications to registered users. 
 
-<img width="705" alt="Screen Shot 2024-07-22 at 11 32 46 PM" src="https://github.com/user-attachments/assets/22f7cdc2-4d56-4415-8d14-bfa32ae1d020">
 
 # System Architecture
+<img width="767" alt="Screen Shot 2024-09-15 at 9 17 52 PM" src="https://github.com/user-attachments/assets/297e466e-32c6-4af1-8f10-160ebdff634f">
 
 
 # Dev Notes
@@ -12,6 +13,7 @@ docker run -v ./html_data/:/app/html_data --env-file ./.env harrisonll/jc_worker
 
 ## Golang Service
 
+### dev env
 - download dependencies
 ```
 go mod tidy
@@ -21,4 +23,11 @@ go mod tidy
 ```
 migrate create -ext sql -dir ./migrations/ -seq init
 migrate -database 'postgres://admin:adminpass@localhost:5432/gs_db?sslmode=disable' -path ./migrations up
+```
+
+- start service
+```
+go run main.go -service web
+go run main.go -service scheduler
+go run main.go -service emailConsumer
 ```
