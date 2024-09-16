@@ -1,3 +1,4 @@
+# Main
 The point of the project is to simulate a distributed microservice that schedules jobs and send notifications to registered users. 
 
 
@@ -5,7 +6,6 @@ The point of the project is to simulate a distributed microservice that schedule
 <img width="767" alt="Screen Shot 2024-09-15 at 9 17 52 PM" src="https://github.com/user-attachments/assets/297e466e-32c6-4af1-8f10-160ebdff634f">
 
 
-# Dev Notes
 ## RUN crawler worker
 ```
 docker run -v ./html_data/:/app/html_data --env-file ./.env harrisonll/jc_worker:test --job_type "software engineer" --location "USA" --company "meta"
