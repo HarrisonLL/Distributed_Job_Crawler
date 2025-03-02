@@ -3,7 +3,8 @@ The point of the project is to simulate a distributed microservice that schedule
 
 
 # System Architecture
-<img width="767" alt="Screen Shot 2024-09-15 at 9 17 52 PM" src="https://github.com/user-attachments/assets/297e466e-32c6-4af1-8f10-160ebdff634f">
+
+<img width="1504" alt="Screenshot 2025-03-02 at 2 26 00 PM" src="https://github.com/user-attachments/assets/b094fe86-9787-42dd-9a5f-458173e3f9ac" />
 
 
 ## RUN crawler worker
