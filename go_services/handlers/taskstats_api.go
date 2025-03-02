@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"go_services/database"
 	"go_services/models"
 	"net/http"
@@ -11,82 +10,91 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type TaskStats struct {
-	TimePeriod   string `json:"time_period"`
-	CompanyName  string `json:"company_name"`
-	JobTypeName  string `json:"job_type_name"`
-	SuccessCount int    `json:"success_count"`
-	FailureCount int    `json:"failure_count"`
+type JobStats struct {
+	TimePeriod string `json:"time_period"`
+	Company    string `json:"company"`
+	JobType    string `json:"job_type"`
+	JobCount   int    `json:"job_count"`
 }
 
 // GET request to fetch task statistics
 func GetTaskStats(c *gin.Context) {
 	var tasks []models.Task
-	if err := database.DB.Find(&tasks).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	startDateStr := c.Query("start_date")
+	endDateStr := c.Query("end_date")
+	now := time.Now()
+
+	var startDate, endDate time.Time
+	if startDateStr != "" {
+		parsedStartDate, err := time.Parse("2006-01-02", startDateStr)
+		if err == nil {
+			startDate = parsedStartDate
+		}
+	} else {
+		startDate = now.Truncate(24 * time.Hour)
+	}
+
+	if endDateStr != "" {
+		parsedEndDate, err := time.Parse("2006-01-02", endDateStr)
+		if err == nil {
+			endDate = parsedEndDate.Add(24 * time.Hour)
+		}
+	} else {
+		endDate = now.Add(24 * time.Hour)
+	}
+
+	startDateStr = startDate.Format("2006-01-02 15:04")
+	endDateStr = endDate.Format("2006-01-02 15:04")
+	taskQuery := database.DB.Where("date_time >= ? and date_time < ?", startDateStr, endDateStr)
+	if queryErr := taskQuery.Find(&tasks).Error; queryErr != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch tasks: " + queryErr.Error(),
+		})
 		return
 	}
 
-	// Sort tasks by DateTime in descending order
-	sort.Slice(tasks, func(i, j int) bool {
-		timeI, _ := time.Parse(time.RFC3339, tasks[i].DateTime)
-		timeJ, _ := time.Parse(time.RFC3339, tasks[j].DateTime)
-		return timeI.After(timeJ)
-	})
+	statsMap := make(map[string]map[string]map[string]*JobStats)
 
-	// Limit to the most recent 24 tasks
-	if len(tasks) > 24 {
-		tasks = tasks[:24]
+	// build grouped nested map
+	var dateGroupFormat string
+	daysDiff := endDate.Sub(startDate).Hours() / 24
+	switch {
+	case daysDiff <= 1:
+		dateGroupFormat = "2006-01-02 15:04"
+	case daysDiff > 1 && daysDiff <= 7:
+		dateGroupFormat = "2006-01-02"
+	case daysDiff > 7 && daysDiff <= 30:
+		dateGroupFormat = "2006-W02"
+	case daysDiff > 30:
+		dateGroupFormat = "2006-01"
 	}
 
-	statsMap := make(map[string]map[string]map[string]*TaskStats)
-
 	for _, task := range tasks {
-		var args struct {
-			Company string `json:"company"`
-			JobType string `json:"job_type"`
-		}
-
-		// Serialize JSONMap to JSON bytes
-		argsBytes, err := json.Marshal(task.Args)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if err := json.Unmarshal(argsBytes, &args); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
 		dateTime, err := time.Parse(time.RFC3339, task.DateTime)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-
-		dateHour := dateTime.Format("2006-01-02 15")
-
+		dateHour := dateTime.Format(dateGroupFormat)
 		if _, ok := statsMap[dateHour]; !ok {
-			statsMap[dateHour] = make(map[string]map[string]*TaskStats)
+			statsMap[dateHour] = make(map[string]map[string]*JobStats)
 		}
-		if _, ok := statsMap[dateHour][args.Company]; !ok {
-			statsMap[dateHour][args.Company] = make(map[string]*TaskStats)
+		if _, ok := statsMap[dateHour][task.Company]; !ok {
+			statsMap[dateHour][task.Company] = make(map[string]*JobStats)
 		}
-		if _, ok := statsMap[dateHour][args.Company][args.JobType]; !ok {
-			statsMap[dateHour][args.Company][args.JobType] = &TaskStats{
-				TimePeriod:  dateHour,
-				CompanyName: args.Company,
-				JobTypeName: args.JobType,
+		if stats, ok := statsMap[dateHour][task.Company][task.JobType]; !ok {
+			statsMap[dateHour][task.Company][task.JobType] = &JobStats{
+				TimePeriod: dateHour,
+				Company:    task.Company,
+				JobType:    task.JobType,
+				JobCount:   task.NumbersOfJobs,
 			}
+		} else {
+			stats.JobCount += task.NumbersOfJobs
 		}
-
-		stats := statsMap[dateHour][args.Company][args.JobType]
-		stats.SuccessCount += len(task.SuccessJobIDs)
-		stats.FailureCount += len(task.FailedJobIDs)
 	}
 
-	var statsList []*TaskStats
+	var statsList []*JobStats
 	for _, companyStats := range statsMap {
 		for _, jobTypeStats := range companyStats {
 			for _, stats := range jobTypeStats {
@@ -94,6 +102,15 @@ func GetTaskStats(c *gin.Context) {
 			}
 		}
 	}
-
+	// sort with comparator
+	sort.Slice(statsList, func(i, j int) bool {
+		if statsList[i].TimePeriod != statsList[j].TimePeriod {
+			return statsList[i].TimePeriod > statsList[j].TimePeriod
+		}
+		if statsList[i].Company != statsList[j].Company {
+			return statsList[i].Company < statsList[j].Company
+		}
+		return statsList[i].JobType < statsList[j].JobType
+	})
 	c.JSON(http.StatusOK, statsList)
 }

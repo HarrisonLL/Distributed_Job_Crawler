@@ -6,18 +6,18 @@ import (
 )
 
 // CreateTask creates a new task in the database
-func CreateTask(taskID, containerID string, args models.JSONMap, isRetry bool, parentTaskID string) error {
+func CreateTask(taskID, RunID string, company string, jobType string, location string) error {
 	task := models.Task{
 		TaskID:         taskID,
-		ContainerID:    containerID,
+		RunID:          RunID,
 		DateTime:       time.Now().Format(time.RFC3339),
-		Args:           args,
+		Company:        company,
+		JobType:        jobType,
+		Location:       location,
 		Status:         models.Started,
+		NumbersOfJobs:  0,
 		SuccessJobIDs:  []string{},
-		FailedJobIDs:   []string{},
 		CompletionRate: 0,
-		IsRetryTask:    isRetry,
-		ParentTaskID:   parentTaskID,
 	}
 
 	if err := DB.Create(&task).Error; err != nil {
@@ -40,7 +40,7 @@ func UpdateTaskStatus(taskID string, containerID string, status models.TaskStatu
 		return nil
 	} else {
 		var task models.Task
-		if err := DB.First(&task, "container_id = ?", taskID).Error; err != nil {
+		if err := DB.First(&task, "run_id = ?", containerID).Error; err != nil {
 			return err
 		}
 		task.Status = status

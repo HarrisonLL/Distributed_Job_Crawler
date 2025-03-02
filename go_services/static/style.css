@@ -1,0 +1,182 @@
+body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f8f9fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+}
+
+.container {
+    display: flex;
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 80vw;
+    height: 80vh;
+}
+.stats, .preferences {
+    width: 30%;
+    padding: 20px;
+}
+.stats {
+    width: 70%;
+    padding: 20px;
+    border-right: 2px solid #ddd;
+}
+h2 {
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #333;
+}
+canvas {
+    max-width: 100%;
+    height: auto;
+}
+.custom-legend {
+    text-align: center;
+    margin-top: 15px;
+    padding: 10px;
+}
+.legend-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.legend-color-box {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+    border-radius: 4px;
+    margin-right: 6px;
+}
+form {
+    display: flex;
+    flex-direction: column;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+label {
+    margin-top: 10px;
+    font-weight: bold;
+}
+input, select, button {
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+button {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 15px;
+    font-weight: bold;
+}
+button:hover {
+    background-color: #0056b3;
+}
+.tab-container {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 10px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background-color: #ddd;
+    cursor: pointer;
+    font-weight: bold;
+    text-align: center;
+}
+
+.tab-btn.active {
+    background-color: #007BFF;
+    color: white;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.auth-form label {
+    margin-top: 10px;
+    font-weight: bold;
+}
+
+.auth-form input {
+    padding: 10px;
+    margin-top: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+
+.auth-form button {
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    cursor: pointer;
+    margin-top: 15px;
+    font-weight: bold;
+    padding: 10px;
+}
+
+.auth-form button:hover {
+    background-color: #0056b3;
+}
+
+.hidden {
+    display: none;
+}
+
+#preferencesSection {
+    display: none;
+}
+
+.preferences-container {
+    width: 90%;
+    max-width: 500px;
+    margin: 0 auto;
+    background: #f9f9f9;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#companyCheckboxes, #jobTypeCheckboxes {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+
+.logout-container {
+    display: flex;
+    justify-content: flex-end; /* Align to the right */
+    margin-top: 30px; /* Push it to the bottom */
+}
+
+.logout-btn {
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}

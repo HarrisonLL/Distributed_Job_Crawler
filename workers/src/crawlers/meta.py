@@ -5,12 +5,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from crawlers.crawler import Crawler
 from bs4 import BeautifulSoup
-from datetime import date
 import requests
 import json
 import time
 import os
-import re
 
 
 class meta(Crawler):
@@ -74,9 +72,7 @@ class meta(Crawler):
             if i >= max_retry:
                 break
         if response.status_code == 200:
-            job_id = self.get_job_id_by_url(url)
             job_details = dict()
-            self.save_job_details_to_html(response.text, self.html_save_path, f'meta_{job_id}.html')
             soup = BeautifulSoup(response.text, 'html.parser')
 
             if soup.find('title') is not None:
@@ -93,13 +89,6 @@ class meta(Crawler):
                 job_details['date_posted'] = description_json.get('datePosted', '')
                 job_details['valid_through'] = description_json.get('validThrough',)
             return job_details
-        return None
-
-    def get_job_id_by_url(self, url) -> str:
-        pattern = r"/jobs/(\d+)"
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
         return None
 
 

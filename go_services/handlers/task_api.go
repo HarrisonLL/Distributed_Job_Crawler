@@ -55,9 +55,7 @@ func UpdateTask(c *gin.Context) {
 	}
 	if len(updatedTask.SuccessJobIDs) > 0 {
 		task.SuccessJobIDs = updatedTask.SuccessJobIDs
-	}
-	if len(updatedTask.FailedJobIDs) > 0 {
-		task.FailedJobIDs = updatedTask.FailedJobIDs
+		task.NumbersOfJobs = len(updatedTask.SuccessJobIDs)
 	}
 
 	if err := database.DB.Save(&task).Error; err != nil {
@@ -67,34 +65,29 @@ func UpdateTask(c *gin.Context) {
 
 	c.JSON(http.StatusOK, task)
 
-	if task.Status == models.Completed {
-		if len(task.FailedJobIDs) > 0 {
-			// retry
-			go services.RetryTaskScheduler(task)
-		} else {
-			// send user email
-			var users []models.User
-			if err := database.DB.Find(&users).Error; err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-
-			taskCompany := strings.ToLower(task.Args["company"].(string))
-			for _, user := range users {
-				userCompanies := strings.ToLower(user.Company)
-				if user.JobType == task.Args["job_type"] && strings.Contains(userCompanies, taskCompany) {
-					if len(task.SuccessJobIDs) == 0 {
-						continue
-					}
-					emailData := map[string]interface{}{
-						"username": user.Username,
-						"email":    user.Email,
-						"company":  taskCompany,
-						"jobIDs":   task.SuccessJobIDs,
-					}
-					services.StartEmailProducer(emailData)
-				}
-			}
+	if task.Status == models.Completed && len(task.SuccessJobIDs) > 0 {
+		// send user email
+		var users []models.User
+		if err := database.DB.Where("email_subscription = ?", true).Find(&users).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}
 
+		taskCompany := strings.ToLower(task.Company)
+		for _, user := range users {
+			userCompanies := strings.ToLower(user.Company)
+			if user.JobType == task.JobType && strings.Contains(userCompanies, taskCompany) {
+				if len(task.SuccessJobIDs) == 0 {
+					continue
+				}
+				emailData := map[string]interface{}{
+					"username": user.Username,
+					"email":    user.Email,
+					"company":  task.Company,
+					"jobIDs":   task.SuccessJobIDs,
+				}
+				services.StartEmailProducer(emailData)
+			}
+		}
 	}
+
 }

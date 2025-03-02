@@ -19,15 +19,16 @@ func (ts TaskStatus) String() string {
 
 type Task struct {
 	TaskID         string         `gorm:"primaryKey" json:"task_id"`          // Task identifier
-	ContainerID    string         `json:"container_id"`                       // Docker Container ID
+	HostType       string         `json:"host_type"`                          // Host type: "local" or "docker" or "k8s"
+	RunID          string         `json:"run_id"`                             // Process ID, or Docker Container ID, or K8S Pod ID
 	DateTime       string         `json:"date_time"`                          // Task creation time
-	Args           JSONMap        `gorm:"type:json" json:"args"`              // Task arguments as JSON
+	Company        string         `json: company`                             // Flattened task arguments company field
+	JobType        string         `json: job_type`                            // Flattened task arguments job type field
+	Location       string         `json: location`                            // Flattened task arguments location field
 	Status         TaskStatus     `json:"status"`                             // Task status
 	SuccessJobIDs  pq.StringArray `gorm:"type:text[]" json:"success_job_ids"` // IDs of successful jobs
-	FailedJobIDs   pq.StringArray `gorm:"type:text[]" json:"failed_job_ids"`  // IDs of failed jobs
+	NumbersOfJobs  int            `json:"numbers_of_jobs"`                    // Number of jobs
 	CompletionRate float64        `json:"completion_rate"`                    // Completion rate
-	IsRetryTask    bool           `json:"is_retry"`                           // Task is retry
-	ParentTaskID   string         `json:"parent_task_id"`                     // Only if task is retried
 }
 
 // JSONMap is a custom type to handle JSON encoding/decoding

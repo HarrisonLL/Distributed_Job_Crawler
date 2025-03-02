@@ -8,7 +8,6 @@ from bs4 import BeautifulSoup
 import time
 import requests
 import os
-import re
 
 
 class amazon(Crawler):
@@ -60,8 +59,6 @@ class amazon(Crawler):
                 break
         job_details = dict()
         if response.status_code == 200:
-            job_id = self.get_job_id_by_url(url)
-            self.save_job_details_to_html(response.text, self.html_save_path, f'amazon_{job_id}.html')
             soup = BeautifulSoup(response.content, 'html.parser')
             job_title = soup.find('h1', class_='title')
             if job_title:
@@ -82,10 +79,3 @@ class amazon(Crawler):
                 if preferred_qualifications_section:
                     job_details['preferred_qualifications'] = preferred_qualifications_section.get_text(separator='\n').strip()
         return job_details
-
-    def get_job_id_by_url(self, url) -> str:
-        pattern = r"/jobs/(\d+)/"
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
-        return None

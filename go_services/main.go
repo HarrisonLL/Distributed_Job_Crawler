@@ -17,20 +17,22 @@ import (
 func startWeb() {
 	router := gin.Default()
 	// Static web pages
+	router.Static("/static", "./static")
 	router.LoadHTMLGlob("static/*")
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "stats.html", nil)
 	})
-	router.GET("/register", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "register.html", nil)
-	})
 
+	// Task api
 	router.GET("/api/v1/tasks", handlers.GetTasks)
 	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
 	router.PATCH("/api/v1/tasks/:task_id", handlers.UpdateTask)
 
-	// Page api
+	// User api
 	router.POST("/api/v1/register", handlers.RegisterUser)
+	router.POST("/api/v1/login", handlers.LoginUser)
+	router.GET("/api/v1/user_profile", handlers.GetUserProfile)
+	router.PATCH("/api/v1/update_profile", handlers.UpdateUserProfile)
 	router.GET("/api/v1/task_stats", handlers.GetTaskStats)
 
 	if err := router.Run(":8080"); err != nil {
@@ -40,12 +42,12 @@ func startWeb() {
 
 func startScheduler() {
 	s := gocron.NewScheduler(time.UTC)
-	s.Every(6).Hours().Do(services.CrawlerTaskBase)
+	s.Every(2).Hours().Do(services.CrawlerTaskBase)
 	s.StartBlocking()
 }
 
 func main() {
-	serviceMode := flag.String("service", "webScheduler", "Service mode: webScheduler, emailConsumer")
+	serviceMode := flag.String("service", "web", "Service mode: web, scheduler, emailConsumer")
 	flag.Parse()
 
 	switch *serviceMode {

@@ -33,12 +33,12 @@ def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler,
     for i,job in enumerate(new_jobs):
         print(f'Now scraping job: {job['url']}', flush=True)
         job_id = crawler.get_job_id_by_url(job['url'])
-        save_job_url_to_db(db, job_id, job['url'])
         details = crawler.get_job_details(job['url'])
-        if len(details.keys()) == 0:
+        if details is None or len(details.keys()) == 0:
             failure.append(job_id)
-        else:
+        else: # only when success then save entry
             details["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            save_job_url_to_db(db, job_id, job['url'])
             save_job_details_to_db(db, job_id, details)
             success.append(job_id)
         if GS_URL:
@@ -51,20 +51,6 @@ def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler,
     if GS_URL:
         data = {"status": 4}
         _patch_data(data, GS_URL, task_id)
-
-
-def retry_task(task_id: str, parent_task_id: str):
-    GS_URL = os.getenv("GS_URL", None)
-    task_details = _get_data(GS_URL, parent_task_id)
-    failed_job_ids = task_details.get('failed_job_ids', [])
-    prev_args = task_details.get('args', dict())
-    if len(failed_job_ids) == 0 or len(prev_args) == 0:
-        print('Nothing to retry')
-        return
-    company, job_type, location = prev_args['company'], prev_args['job_type'], prev_args['location']
-    db = get_db(company)
-    crawler = init_crawler(company, job_type, location)
-    _crawl_individual_jobs(failed_job_ids, GS_URL, task_id, crawler, db)
 
 
 def process_task(company: str, job_type: str, location: str, task_id: str):
@@ -96,10 +82,6 @@ if __name__ == "__main__":
     parser.add_argument('--location', type=str, help='Location for the job search')
     parser.add_argument('--company', type=str, help='Company for the job search')
     parser.add_argument('--task_id', type=str, help='Current task id')
-    parser.add_argument('--retry', type=str, help='If the task is retried task')
-    parser.add_argument('--parent_task_id', type=str, help='Parent task id')
+
     args = parser.parse_args()
-    if args.retry and args.retry.lower() == "true":
-        retry_task(args.task_id,args.parent_task_id)
-    else:
-        process_task(args.company, args.job_type, args.location, args.task_id)
+    process_task(args.company, args.job_type, args.location, args.task_id)

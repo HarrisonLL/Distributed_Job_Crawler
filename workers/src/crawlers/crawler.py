@@ -1,4 +1,5 @@
 from typing import List
+import re
 
 '''
 crawler interface
@@ -18,9 +19,11 @@ class Crawler():
     def get_job_id_by_url(self, url) -> str:
         pass
 
-    def save_job_details_to_html(self, html_content:str, save_path:str, html_name:str):
-        with open(f'{save_path}/{html_name}', 'w') as f:
-            f.write(html_content)
-    
-
-
+    @staticmethod
+    def get_job_id_by_url(url) -> str:
+        if url.endswith('/'): url = url[:-1]
+        pattern = r"/jobs/(\d+)"
+        match = re.search(pattern, url)
+        if match:
+            return match.group(1)
+        return None

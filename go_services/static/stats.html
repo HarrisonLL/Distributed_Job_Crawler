@@ -1,105 +1,96 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crawling Task Statistics</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 1200px;
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-        }
-        #taskStatsChart {
-            width: 100% !important;
-            height: 600px !important;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - Stats & Preferences</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Crawling Task Statistics</h1>
-        <canvas id="taskStatsChart"></canvas>
+  <div class="container">
+    <div class="stats">
+      <h2>New Jobs Statistics</h2>
+      <div class="date-selector">
+        <label for="startDate">Start Date:</label>
+        <input type="date" id="startDate" />
+        <label for="endDate">End Date:</label>
+        <input type="date" id="endDate" />
+        <button id="fetchDataBtn">Fetch Data</button>
+      </div>
+      <canvas id="jobChart"></canvas>
+      <div class="custom-legend" id="customLegend"></div>
     </div>
-    <script>
-        fetch('/api/v1/task_stats')
-            .then(response => response.json())
-            .then(data => {
-                const ctx = document.getElementById('taskStatsChart').getContext('2d');
 
-                const labels = data.map(item => `${item.time_period} (${item.company_name} - ${item.job_type_name})`);
-                const successData = data.map(item => item.success_count);
-                const failureData = data.map(item => item.failure_count);
+    <div class="preferences">
+      <h2>Account Access</h2>
+  <div class="tab-container">
+    <button class="tab-btn active" data-form="loginForm">Login</button>
+    <button class="tab-btn" data-form="registerForm">Register</button>
+  </div>
 
-                new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Success Count',
-                                data: successData,
-                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Failed Count',
-                                data: failureData,
-                                backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                                borderColor: 'rgba(255, 99, 132, 1)',
-                                borderWidth: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            },
-                            x: {
-                                ticks: {
-                                    maxRotation: 90,
-                                    minRotation: 45
-                                }
-                            }
-                        },
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top'
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(tooltipItem) {
-                                        return `${tooltipItem.dataset.label}: ${tooltipItem.raw}`;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                });
-            })
-            .catch(error => console.error('Error fetching task stats:', error));
-    </script>
+  <!-- Login Form -->
+  <form id="loginForm" class="auth-form">
+    <label for="loginUsername">Username</label>
+    <input type="text" id="loginUsername" name="loginUsername" required>
+    <label for="loginPassword">Password</label>
+    <input type="password" id="loginPassword" name="loginPassword" required>
+    <button type="submit">Login</button>
+  </form>
+
+  <!-- Registration Form (Hidden by Default) -->
+  <form id="registerForm" class="auth-form hidden">
+    <label for="registerUsername">Username</label>
+    <input type="text" id="registerUsername" name="registerUsername" required>
+    <label for="registerPassword">Password</label>
+    <input type="password" id="registerPassword" name="registerPassword" required>
+    <label for="confirmPassword">Confirm Password</label>
+    <input type="password" id="confirmPassword" name="confirmPassword" required>
+    <p id="passwordError" style="color: red; display: none;">Passwords do not match!</p>
+    <button type="submit">Register</button>
+  </form>
+</div>
+
+<!-- Update Preferences Section (Hidden by Default) -->
+<div id="preferencesSection" class="preferences-container">
+    <h2>Update Your Preferences</h2>
+    <form id="updatePreferencesForm">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+
+        <label for="yoe">Years of Experience</label>
+        <select id="yoe" name="yoe" required>
+            <option value="0-1">0-1</option>
+            <option value="1-2">1-2</option>
+            <option value="2-3">2-3</option>
+            <option value="3-5">3-5</option>
+            <option value="5+">5+</option>
+        </select>
+
+        <label>Preferred Companies</label>
+        <div id="companyCheckboxes">
+            <label><input type="checkbox" value="amazon" name="company"> Amazon</label>
+            <label><input type="checkbox" value="meta" name="company"> Meta</label>
+        </div>
+
+        <label>Preferred Job Type</label>
+        <div id="jobTypeCheckboxes">
+            <label><input type="checkbox" value="Software Engineer" name="jobType"> Software Engineer</label>
+            <label><input type="checkbox" value="Machine Learning Engineer" name="jobType"> Machine Learning Engineer</label>
+            <label><input type="checkbox" value="Data Scientist" name="jobType"> Data Scientist</label>
+        </div>
+        <label>
+            * Subscribe to Job Notifications <input type="checkbox" id="emailSubscription"> 
+        </label>
+
+        <button type="submit">Save Preferences</button>
+    </form>
+    <div class="logout-container">
+        <button type="button" id="logoutBtn" class="logout-btn">Log Out</button>
+    </div>
+
+</div>
+
+  <script src="static/script.js"></script>
 </body>
 </html>
