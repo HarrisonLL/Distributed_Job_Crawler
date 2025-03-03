@@ -2,8 +2,11 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"go_services/database"
+	"io"
 	"log"
+	"os"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -38,7 +41,9 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 	log.Printf("Container %s started successfully\n", resp.ID)
 
 	if !debug {
-		// Start a goroutine to wait for the container to finish and then remove it
+		// Start a goroutine to wait for the container to finish and then remove it,
+		// ContainerWait API will notify current goroutine thread by starting two channels (statusCh, errCh)
+		// Save logs only when container exit with error
 		go func(containerID string) {
 			statusCh, errCh := cli.ContainerWait(context.Background(), containerID, container.WaitConditionNotRunning)
 			select {
@@ -47,15 +52,38 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 					log.Printf("Error while waiting for container %s: %v", containerID, err)
 					return
 				}
-			case status := <-statusCh:
-				if status.Error != nil {
-					log.Printf("Container %s finished with error: %v", containerID, status.Error.Message)
-					database.UpdateTaskStatus("", containerID, 3)
+			case <-statusCh:
+				ctx := context.Background()
+				inspect, err := cli.ContainerInspect(ctx, containerID)
+				if err != nil {
+					log.Printf("Error while inspecting container %s: %v", containerID, err)
+					return
+				}
+				if inspect.State.ExitCode != 0 {
+					logs, logErr := cli.ContainerLogs(ctx, containerID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+					if logErr == nil {
+						defer logs.Close()
+						logData, _ := io.ReadAll(logs)
+						logStoragePath := os.Getenv("WORKER_LOG_STORAGE_PATH")
+						if logStoragePath != "" {
+							logFilePath := fmt.Sprintf("%s/container_%s.log", logStoragePath, containerID)
+							err := os.WriteFile(logFilePath, logData, 0644)
+							if err != nil {
+								log.Printf("Failed to write logs to %s: %v", logFilePath, err)
+							} else {
+								log.Printf("Saved error logs for container %s at %s", containerID, logFilePath)
+							}
+						}
+						database.UpdateTaskStatus("", containerID, 3)
+					} else {
+						log.Printf("Failed to fetch logs for container %s: %v", containerID, logErr)
+					}
 				} else {
 					log.Printf("Container %s finished successfully", containerID)
 				}
+
 				// Remove exited container
-				if err := cli.ContainerRemove(context.Background(), containerID, types.ContainerRemoveOptions{}); err != nil {
+				if err := cli.ContainerRemove(ctx, containerID, types.ContainerRemoveOptions{}); err != nil {
 					log.Printf("Failed to remove container %s: %v", containerID, err)
 				} else {
 					log.Printf("Removed container %s", containerID)
