@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"go_services/cli"
 	"go_services/database"
 	"go_services/handlers"
 	"go_services/services"
@@ -47,7 +48,7 @@ func startScheduler() {
 }
 
 func main() {
-	serviceMode := flag.String("service", "web", "Service mode: web, scheduler, emailConsumer")
+	serviceMode := flag.String("service", "", "Service mode: web, scheduler, emailConsumer, CLI")
 	flag.Parse()
 
 	switch *serviceMode {
@@ -59,6 +60,9 @@ func main() {
 		startScheduler()
 	case "emailConsumer":
 		services.StartEmailConsumer()
+	case "CLI":
+		database.Init()
+		cli.RunCLI()
 	default:
 		log.Fatalf("Invalid service mode: %s", *serviceMode)
 	}
