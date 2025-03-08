@@ -3,7 +3,7 @@ module go_services
 go 1.20
 
 require (
-	github.com/docker/docker v24.0.9+incompatible // docker api
+	github.com/docker/docker v20.10.21+incompatible // docker api
 	github.com/gin-gonic/gin v1.10.0
 	gorm.io/driver/postgres v1.5.9
 	gorm.io/gorm v1.25.10
