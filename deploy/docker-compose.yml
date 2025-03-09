@@ -4,6 +4,7 @@ services:
   mongodb:
     image: mongo:latest
     container_name: mongodb
+    restart: always
     ports:
       - "27017:27017"
     environment:
@@ -17,6 +18,7 @@ services:
   postgresdb:
     image: postgres:latest
     container_name: postgres
+    restart: always
     ports:
       - "5432:5432"
     environment:
@@ -31,6 +33,7 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    restart: always
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -45,6 +48,7 @@ services:
   goweb:
     image: harrisonll/jc_gs:v1.2.0-linux
     container_name: goweb
+    restart: always
     command: "./main --service=web" 
     ports:
       - "8080:8080"
@@ -63,6 +67,7 @@ services:
   gocron:
     image: harrisonll/jc_gs:v1.2.0-linux
     container_name: gocron
+    restart: always
     command: "./main --service=scheduler"
     env_file:
       - .env
@@ -71,8 +76,21 @@ services:
       - mongodb
       - rabbitmq
     volumes:
-      - ${PWD}/worker_error_logs:/app/worker_error_logs
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jc_network
+
+  goemail:
+    image: harrisonll/jc_gs:v1.2.0-linux
+    container_name: goemail
+    restart: always
+    command: "./main --service=emailConsumer"
+    env_file:
+      - .env
+    depends_on:
+      - postgresdb
+      - mongodb
+      - rabbitmq
     networks:
       - jc_network
 
