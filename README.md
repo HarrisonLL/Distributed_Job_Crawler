@@ -37,10 +37,12 @@ docker run -v --env-file ./.env harrisonll/jc_worker:test --job_type "software e
 ```
 # comment out gocron goemail in docker-compose
 docker-compose up -d
+
 # run CLI to add initial data to job type table
 docker exec -it goweb sh
 ./main --service=CLI add "amazon" "software engineer" "harrisonll/jc_worker:v1.0.0-linux"
 ./main --service=CLI add "meta" "software engineer" "harrisonll/jc_worker:v1.0.0-linux"
+
 # uncomment gocron and goemai
 # note sometimes you may not be able to join the docker network immediately
 # prune you container and do up and down a few times, it will show up in the jc_network
