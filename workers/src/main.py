@@ -5,7 +5,8 @@ from crawlers import amazon, meta
 from typing import List
 from mongo_client import get_db, job_exists, save_job_url_to_db, save_job_details_to_db
 
-logger = logging.basicConfig(format="[%(asctime)s] [%(levelname)s] - %(message)s")
+logging.basicConfig(format="[%(asctime)s] [%(levelname)s] - %(message)s")
+logger = logging.getLogger()
 
 def init_crawler(company: str, job_type: str, location: str):
     crawlers = {

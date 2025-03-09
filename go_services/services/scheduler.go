@@ -42,6 +42,7 @@ func CrawlerTaskBase() {
 		taskID := uuid.New().String()
 		envVars := []string{
 			fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
+			fmt.Sprintf("GS_URL=%s", os.Getenv("GS_URL")),
 		}
 
 		// Start the crawler work

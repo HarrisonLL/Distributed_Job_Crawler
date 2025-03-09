@@ -11,6 +11,6 @@ COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt && rm requirements.txt
 COPY install_driver.py /app/
 RUN python /app/install_driver.py
-ENV WEB_DRIVER_PATH=/root/.wdm/drivers/chromedriver/linux64/126.0.6478.126/chromedriver-linux64/chromedriver
+ENV WEB_DRIVER_PATH=/root/.wdm/drivers/chromedriver/linux64/134.0.6998.35/chromedriver-linux64/chromedriver
 COPY src /app
 ENTRYPOINT ["python", "main.py"]

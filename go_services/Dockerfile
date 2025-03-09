@@ -6,6 +6,7 @@ COPY . .
 RUN go build -o main .
 
 FROM alpine:latest
+RUN apk add --no-cache docker-cli
 COPY --from=builder /app/main .
 COPY ./static ./static
 EXPOSE 8080

@@ -32,3 +32,15 @@ go run main.go -service web
 go run main.go -service scheduler
 go run main.go -service emailConsumer
 ```
+
+## Deployment
+### docker-compose
+```
+# comment out gocron goemail in docker-compose
+docker-compose up -d
+docker exec -it goweb sh
+./main --service=CLI add "amazon" "software engineer" "harrisonll/jc_worker:v1.0.0-linux"
+./main --service=CLI add "meta" "software engineer" "harrisonll/jc_worker:v1.0.0-linux"
+docker-compose down
+docker-compose up -d
+```

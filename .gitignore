@@ -4,3 +4,5 @@
 __MACOSX
 test_workers
 .env
+deploy/*_data
+deploy/*_logs
