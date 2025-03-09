@@ -33,7 +33,7 @@ go run main.go -service emailConsumer
 ```
 
 ## Deployment
-### docker-compose
+### docker-compose (linux)
 ```
 # comment out gocron goemail in docker-compose
 docker-compose up -d
@@ -47,3 +47,5 @@ docker exec -it goweb sh
 docker-compose down
 docker-compose up -d
 ```
+<img width="607" alt="Screenshot 2025-03-09 at 1 21 43 PM" src="https://github.com/user-attachments/assets/22879399-0580-48ad-99f7-3a8cef377c18" />
+
