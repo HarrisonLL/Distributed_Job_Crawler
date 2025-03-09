@@ -12,9 +12,8 @@ The point of the project is to simulate a distributed microservice that schedule
 docker run -v ./html_data/:/app/html_data --env-file ./.env harrisonll/jc_worker:test --job_type "software engineer" --location "USA" --company "meta"
 ```
 
-## Golang Service
-
-### dev env
+## Development
+### Golang Services
 - download dependencies
 ```
 go mod tidy
