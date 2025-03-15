@@ -1,5 +1,6 @@
 # Main
-The aim of the project is to simulate a distributed microservice that schedules crawling jobs and send notifications to registered users. 
+The project is a simulation of distributed microservice that schedules crawling jobs and send notifications to registered users.
+The purpose is to learn multithreading in Golang and its Docker and K8S sdk.
 
 
 # System Architecture
