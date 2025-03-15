@@ -19,9 +19,9 @@ func startWeb() {
 	router := gin.Default()
 	// Static web pages
 	router.Static("/static", "./static")
-	router.LoadHTMLGlob("static/*")
+	router.LoadHTMLGlob("templates/*")
 	router.GET("/", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "stats.html", nil)
+		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
 	// Task api

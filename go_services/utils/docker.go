@@ -11,8 +11,8 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/filters"
-	"github.com/docker/docker/client"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/client"
 )
 
 // Debug allows preserve end docker container
@@ -37,9 +37,7 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 		EndpointsConfig: map[string]*network.EndpointSettings{
 
 			"jc_network": {},
-
 		},
-
 	}
 
 	resp, err := cli.ContainerCreate(context.Background(), config, hostConfig, networkingConfig, nil, "")

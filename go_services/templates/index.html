@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard - Stats & Preferences</title>
+  <script src="https://unpkg.com/vue@3"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <div id="app">
+    <div class="container">
+      <!-- Left Panel: Job Stats Chart -->
+      <div class="stats">
+        <h2>New Jobs Statistics</h2>
+        <div class="date-selector">
+          <label for="startDate">Start Date:</label> &nbsp;
+          <input type="date" v-model="startDate" /> &nbsp;&nbsp;
+          <label for="endDate">End Date:</label> &nbsp;
+          <input type="date" v-model="endDate" /> &nbsp;&nbsp;
+          <button @click="fetchJobStats">Fetch Data</button>
+        </div>
+        <canvas id="jobChart"></canvas>
+        <div class="custom-legend" id="customLegend"></div>
+      </div>
+      <!-- Right Panel: Login & Preferences -->
+      <div class="preferences">
+        <h2 v-if="!isLoggedIn">Account Access</h2>
+        <div class="tab-container" v-if="!isLoggedIn">
+          <button class="tab-btn" :class="{ active: activeTab === 'login' }" @click="activeTab = 'login'">Login</button>
+          <button class="tab-btn" :class="{ active: activeTab === 'register' }" @click="activeTab = 'register'">Register</button>
+        </div>
+
+        <!-- Login Form -->
+        <form v-if="activeTab === 'login' && !isLoggedIn" @submit.prevent="handleLogin">
+          <label>Username</label>
+          <input v-model="loginData.username" type="text" required>
+          <label>Password</label>
+          <input v-model="loginData.password" type="password" required>
+          <button type="submit">Login</button>
+        </form>
+
+        <!-- Registration Form -->
+        <form v-if="activeTab === 'register' && !isLoggedIn" @submit.prevent="handleRegister">
+          <label>Username</label>
+          <input v-model="registerData.username" type="text" required>
+          <label>Password</label>
+          <input v-model="registerData.password" type="password" required>
+          <label>Confirm Password</label>
+          <input v-model="registerData.confirmPassword" type="password" required>
+          <button type="submit">Register</button>
+        </form>
+
+        <!-- Preferences Form (Shown after login) -->
+        <div v-if="isLoggedIn">
+          <h2>Update Your Preferences</h2>
+          <form @submit.prevent="updatePreferences">
+            <label>Email</label>
+            <input v-model="userProfile.email" type="email" required>
+
+            <label>Years of Experience</label>
+            <select v-model="userProfile.yoe" required>
+              <option value="0-1">0-1</option>
+              <option value="1-2">1-2</option>
+              <option value="2-3">2-3</option>
+              <option value="3-5">3-5</option>
+              <option value="5+">5+</option>
+            </select>
+
+            <label>Preferred Companies</label>
+            <div v-for="company in companyList" :key="company">
+              <label>
+                <input type="checkbox" :value="company" v-model="userProfile.companies">
+                {{ "{{ company }}" }}
+              </label>
+            </div>
+
+            <label>Preferred Job Type</label>
+            <div v-for="job in jobTypeList" :key="job">
+              <label>
+                <input type="checkbox" :value="job" v-model="userProfile.jobTypes">
+                {{ "{{ job }}" }}
+              </label>
+            </div>
+
+            <label>
+              <input type="checkbox" v-model="userProfile.emailSubscription">
+              * Subscribe to Job Notifications
+            </label>
+
+            <button type="submit">Save Preferences</button>
+          </form>
+
+          <button @click="handleLogout">Logout</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script src="static/app.js"></script>
+</body>
+</html>
