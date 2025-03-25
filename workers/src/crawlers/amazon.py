@@ -1,34 +1,21 @@
 from typing import List
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from crawlers.crawler import Crawler
 from bs4 import BeautifulSoup
 import time
 import requests
-import os
 
 
 class amazon(Crawler):
     def __init__(self, job_type, location) -> None:
         super().__init__(job_type, location)
         self.AMAZONURL = "https://www.amazon.jobs/en/"
-        self.web_driver_path = os.getenv('WEB_DRIVER_PATH', '/usr/local/bin/chromedriver')
         self.max_page = 2 # max page per crawling
-        self.html_save_path = os.getenv('HTML_PATH', '/app/html_data')
+        self.init_web_driver(webdriver)
 
-    def _init_driver(self) -> None:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        service = Service(self.web_driver_path)
-        self.driver = webdriver.Chrome(service=service, options=chrome_options)
-    
     def get_jobs(self) -> List:
         jobs = []
-        self._init_driver()
         for i in range(0, 10*self.max_page, 10):
             query = f"search?offset={i}&result_limit=10&sort=recent"
             query += f"&base_query={self.job_type}&country={self.location}"

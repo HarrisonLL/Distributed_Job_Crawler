@@ -1,35 +1,20 @@
 from typing import List
 from seleniumwire import webdriver
 from seleniumwire.utils import decode
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.chrome.options import Options
 from crawlers.crawler import Crawler
 from bs4 import BeautifulSoup
 import requests
 import json
 import time
-import os
 
 
 class meta(Crawler):
     def __init__(self, job_type, location) -> None:
         super().__init__(job_type, location)
         self.METAURL = "https://www.metacareers.com/jobs/"
-        self.html_save_path = os.getenv('HTML_PATH', '/app/html_data')
-    
-    def _init_driver(self) -> None:
-        chrome_driver_path = os.getenv('WEB_DRIVER_PATH', '/usr/local/bin/chromedriver')
-        chrome_options = Options()
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        service = Service(chrome_driver_path)
-        driver = webdriver.Chrome(service=service, options=chrome_options)
-        driver.maximize_window()
-        self.driver = driver
+        self.init_web_driver(webdriver)
    
     def _parse_job_page(self, url):
-        self._init_driver()
         self.driver.get(url)
         time.sleep(10)
         for request in self.driver.requests:
@@ -71,13 +56,11 @@ class meta(Crawler):
             response = requests.get(url)
             if i >= max_retry:
                 break
+        job_details = dict()
         if response.status_code == 200:
-            job_details = dict()
             soup = BeautifulSoup(response.text, 'html.parser')
-
             if soup.find('title') is not None:
                 job_details['job_title'] = soup.find('title').text
-            
             if soup.find('script', type='application/ld+json') is not None:
                 description_tag = soup.find('script', type='application/ld+json')
                 description_json = json.loads(description_tag.string)
@@ -88,12 +71,4 @@ class meta(Crawler):
                 job_details['employment_type'] = description_json.get('employmentType', '')
                 job_details['date_posted'] = description_json.get('datePosted', '')
                 job_details['valid_through'] = description_json.get('validThrough',)
-            return job_details
-        return None
-
-
-if __name__ == '__main__':
-    job_url = "https://www.metacareers.com/jobs/1341194059868794"
-    job_url2 = "https://www.metacareers.com/jobs/774198984091403"
-    crawler = meta('software engineer', 'USA')
-    print(crawler.get_job_details(job_url))
+        return job_details

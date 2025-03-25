@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
             jobTypes: [],
             emailSubscription: false
           },
-          companyList: ["amazon", "meta"],
+          companyList: ["amazon", "meta", "google", "uber"],
           jobTypeList: ["software engineer", "data scientist", "machine learning engineer"],
           chart: null,
           baseColors: ["#FF8C00", "#4682B4", "#FF6F61", "#6B8E23", "#FFD700", "#20B2AA", "#DC143C", "#8A2BE2", "#2E8B57", "#1E90FF", "#9932CC", "#FF4500"]
