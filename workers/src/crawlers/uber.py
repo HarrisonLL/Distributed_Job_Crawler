@@ -50,7 +50,7 @@ class uber(Crawler):
             data = response.json()
             results = data.get("data", {}).get("results", [])
             for job in results:
-                job_id = job["id"]
+                job_id = str(job["id"])
                 jobs.append({
                     "job_id": job_id,
                     "title": job["title"],

@@ -17,23 +17,32 @@ class meta(Crawler):
     def _parse_job_page(self, url):
         self.driver.get(url)
         time.sleep(10)
+        all_data = []
         for request in self.driver.requests:
             if request.response:
                 if request.url == "https://www.metacareers.com/graphql":
                     body = decode(request.response.body, request.response.headers.get('Content-Encoding', 'identity'))
-                    parsed = json.loads(body)["data"]
-                    if "job_search" in parsed:
+                    data = json.loads(body)["data"]
+                    all_data.append(data)
+                    if "job_search_with_featured_jobs" in data:
                         self.driver.quit()
-                        return parsed
+                        try:
+                            all_jobs =  data["job_search_with_featured_jobs"]["all_jobs"]
+                        except KeyError:
+                            raise Exception(f"Parsed data schema changed. \n {data["job_search_with_featured_jobs"].keys()}")
+                        return all_jobs
+        
         self.driver.quit()
-        return None
+        if len(all_data) > 0:
+            raise Exception(f"Responsed data schema changed. \n {all_data}")
+        raise Exception(f"Requests failed")
     
     def get_jobs(self) -> List:
         jobs = []
         query = f"?q={self.job_type.replace(' ', '%20')}"
-        query += "&leadership_levels[0]=Individual%20Contributor&sort_by_new=true"
-        query += "&offices[0]=New%20York%2C%20NY&offices[1]=Menlo%20Park%2C%20CA"
-        parsed = self._parse_job_page(self.METAURL + query)["job_search"]
+        query += "&leadership_levels[0]=Individual%20Contributor&sort_by_new=true&roles[0]=Full%20time%20employment"
+        query += "&offices[0]=Menlo%20Park%2C%20CA&offices[1]=Seattle%2C%20WA&offices[2]=New%20York%2C%20NY"
+        parsed = self._parse_job_page(self.METAURL + query)
         for j in parsed:
             location = "N/A"
             if len(j["locations"]) > 0:
@@ -41,7 +50,6 @@ class meta(Crawler):
             jobs.append(
                 {
                 'title': j["title"],
-                'desc': j["teams"][0],
                 'location': location,
                 'url': f"https://www.metacareers.com/jobs/{j['id']}"
                 })
