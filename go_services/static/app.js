@@ -10,17 +10,12 @@ document.addEventListener("DOMContentLoaded", () => {
           activeTab: "login",
           loginData: { username: "", password: "" },
           registerData: { username: "", password: "", confirmPassword: "" },
-          userProfile: {
-            email: "",
-            yoe: "0-1",
-            companies: [],
-            jobTypes: [],
-            emailSubscription: false
-          },
-          companyList: ["amazon", "meta", "google", "uber"],
+          userProfile: { email: "", yoe: "0-1", companies: [], jobTypes: [], emailSubscription: false },
+          companyList: ["amazon", "google", "meta", "salesforce", "uber"],
           jobTypeList: ["software engineer", "data scientist", "machine learning engineer"],
+          selectedJobType: "software engineer",
           chart: null,
-          baseColors: ["#FF8C00", "#4682B4", "#FF6F61", "#6B8E23", "#FFD700", "#20B2AA", "#DC143C", "#8A2BE2", "#2E8B57", "#1E90FF", "#9932CC", "#FF4500"]
+          companyColors: { "amazon": "#F79B1B", "google": "#F4B400", "meta": "#4267B2", "salesforce": "#00A1E0", "uber": "#333333"}
         };
       },
       mounted() {
@@ -31,74 +26,83 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       },
       methods: {
-
         async fetchJobStats() {
           try {
-            const response = await fetch(`/api/v1/task_stats?start_date=${this.startDate}&end_date=${this.endDate}`);
+            const response = await fetch(`/api/v1/task_stats?start_date=${this.startDate}&end_date=${this.endDate}&job_type=${encodeURIComponent(this.selectedJobType)}`);
             this.jobStats = await response.json();
             this.renderChart();
           } catch (error) {
             console.error("Error fetching job stats:", error);
           }
         },
-
-        adjustColor(baseColor, offset) {
-            let [r, g, b] = baseColor.match(/\w\w/g).map(hex => parseInt(hex, 16));
-            return `rgb(${Math.min(255, r + offset)},${Math.min(255, g + offset)},${Math.min(255, b + offset)})`;
-          },
-
-        renderCustomLegend(colorMap) {
-            const legendContainer = document.getElementById('customLegend');
-            legendContainer.innerHTML = '';
-            Object.keys(colorMap).forEach(company => {
-                const row = document.createElement('div');
-                row.classList.add('legend-row');
-                const companyLabel = document.createElement('span');
-                companyLabel.innerHTML = `<strong>${company}:</strong> `;
-                row.appendChild(companyLabel);
-                Object.entries(colorMap[company].shades).forEach(([job, color]) => {
-                    const colorBox = document.createElement('span');
-                    colorBox.classList.add('legend-color-box');
-                    colorBox.style.backgroundColor = color;
-                    row.appendChild(colorBox);
-                    const text = document.createElement('span');
-                    text.innerText = ` ${job} `;
-                    row.appendChild(text);
-                });
-                legendContainer.appendChild(row);
-            });
+        distroyChart() {
+          if (this.chart) {
+            this.chart.destroy();
+            this.chart = null;
+          }
         },
-
         renderChart() {
-          if (this.chart) this.chart.destroy();
+          this.distroyChart();
+          if (!Array.isArray(this.jobStats) || !this.jobStats.length) return;
+          if (!document.getElementById("jobChart")) return;
           const ctx = document.getElementById("jobChart").getContext("2d");
-          const companies = [...new Set(this.jobStats.map(stat => stat.company))];
-          const jobTypes = [...new Set(this.jobStats.map(stat => stat.job_type))];
-          let colorMap = {};
-          companies.forEach((company, index) => {
-            colorMap[company] = { baseColor: this.baseColors[index % this.baseColors.length], shades: {} };
-            jobTypes.forEach((job, jIndex) => {
-                colorMap[company].shades[job] = this.adjustColor(colorMap[company].baseColor, jIndex * 30);
-            });
+          const companyJobCounts = {};
+          this.jobStats.forEach(stat => {
+            const company = stat.company;
+            const count = stat.job_count || 0;
+            companyJobCounts[company] = (companyJobCounts[company] || 0) + count;
           });
-          const labels = [...new Set(this.jobStats.map(stat => stat.time_period))].sort();
-          const datasets = this.jobStats.map(stat => ({
-            label: `${stat.company} - ${stat.job_type}`,
-            backgroundColor: colorMap[stat.company].shades[stat.job_type],
-            data: labels.map(label => stat.time_period === label ? stat.job_count : 0),
-        }));
+          const sortedEntries = Object.entries(companyJobCounts).sort((a, b) => b[1] - a[1]);
+          const values = sortedEntries.map(([_, count]) => count);
+          const companyColors = this.companyColors;
+          const colorSquaresPlugin = {
+            id: 'coloredLabels',
+            afterDraw(chart) {
+              const yAxis = chart.scales.y;
+              const ctx = chart.ctx;
+              const labels = chart.data.labels;
+              labels.forEach((company, index) => {
+                const y = yAxis.getPixelForTick(index);
+                ctx.fillStyle = companyColors[company];
+                ctx.fillRect(10, y - 7, 10, 10);
+              });
+            }
+          };
           this.chart = new Chart(ctx, {
             type: "bar",
-            data: { labels, datasets },
+            data: {
+              labels: sortedEntries.map(([company]) => company),
+              datasets: [{ label: "Jobs Found", data: values,}]
+            },
             options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
-            }
+              indexAxis: 'y',
+              responsive: true,
+              plugins: {
+                legend: { display: false }
+              },
+              scales: {
+                x: { beginAtZero: true,},
+                y: {
+                  ticks: {
+                    font: { size: 14 },
+                    callback: function(_, index) {
+                      const company = sortedEntries[index][0];
+                      return company.charAt(0).toUpperCase() + company.slice(1);
+                    }
+                  },
+                  title: {
+                    display: true,
+                    padding: {
+                      top: 0,
+                      bottom: 10
+                    }
+                  }
+                }
+              }
+            },
+            plugins: [colorSquaresPlugin]
           });
-          this.renderCustomLegend(colorMap);
         },
-
         async handleLogin() {
           try {
             const response = await fetch("/api/v1/login", {
@@ -120,7 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Error during login:", error);
           }
         },
-
         async handleRegister() {
             if (this.registerData.password !== this.registerData.confirmPassword) {
                 alert("Passwords do not match!");
@@ -133,9 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             const data = await response.json();
             alert(data.message || "Registration failed.");
-          
         },
-
         async fetchUserProfile() {
             if (!this.token) return;
             const response = await fetch("/api/v1/user_profile", {
@@ -153,7 +154,6 @@ document.addEventListener("DOMContentLoaded", () => {
               console.error("Failed to fetch user profile:", data.error);
             }
         },
-
         async updatePreferences() {
             if (!this.token) {
                 alert("Please log in first.");
@@ -173,7 +173,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 email_subscription: this.userProfile.emailSubscription,
               }),
             });
-  
             const data = await response.json();
             if (response.ok) {
               alert("Profile updated successfully!");
@@ -181,7 +180,6 @@ document.addEventListener("DOMContentLoaded", () => {
               alert(data.error || "Failed to update profile.");
             }
         },
-
         handleLogout() {
           localStorage.removeItem("token");
           this.token = "";

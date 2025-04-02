@@ -19,6 +19,10 @@
           <input type="date" v-model="startDate" /> &nbsp;&nbsp;
           <label for="endDate">End Date:</label> &nbsp;
           <input type="date" v-model="endDate" /> &nbsp;&nbsp;
+          <label>Job Type:</label> &nbsp;
+        <select v-model="selectedJobType">
+        <option v-for="job in jobTypeList" :key="job" :value="job">{{ job }}</option>
+        </select> &nbsp;&nbsp;
           <button @click="fetchJobStats">Fetch Data</button>
         </div>
         <canvas id="jobChart"></canvas>
@@ -72,7 +76,7 @@
             <div v-for="company in companyList" :key="company">
               <label>
                 <input type="checkbox" :value="company" v-model="userProfile.companies">
-                {{ "{{ company }}" }}
+                {{ company }}
               </label>
             </div>
 
@@ -80,7 +84,7 @@
             <div v-for="job in jobTypeList" :key="job">
               <label>
                 <input type="checkbox" :value="job" v-model="userProfile.jobTypes">
-                {{ "{{ job }}" }}
+                {{  job }}
               </label>
             </div>
 

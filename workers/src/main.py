@@ -31,7 +31,6 @@ def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler,
     success = []
     for job in new_jobs:
         try:
-            job_id = crawler.get_job_id_by_url(job['url'])
             details = crawler.get_job_details(job['url'])
         except Exception as e:
             logger.error(e, exc_info=True)
@@ -41,9 +40,9 @@ def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler,
         else: # only when success then save entry
             details["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
             try:
-                save_job_url_to_db(db, job_id, job['url'])
-                save_job_details_to_db(db, job_id, details)
-                success.append(job_id)
+                save_job_url_to_db(db, job['job_id'], job['url'])
+                save_job_details_to_db(db, job['job_id'], details)
+                success.append(job['job_id'])
             except Exception as e:
                 logger.error(e, exc_info=True)
     data = {
@@ -69,19 +68,22 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
         _patch_data({"status": 4}, GS_URL, task_id)
         return
     
-    if company in ['google', 'uber', 'salesforce']: # companies that skip parsing step
+    if company in ['google', 'uber']: # companies that skip parsing step
+        new_jobs = []
         for job in jobs:
             if not job_exists(db, job['job_id']):
                 job["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
                 save_job_url_to_db(db, job['job_id'], job['url'])
                 save_job_details_to_db(db, job['job_id'], job)
-        data = { "completion_rate": 1,  "success_job_ids": [job['job_id'] for job in jobs], "status": 4}
+                new_jobs.append(job['job_id'])
+        data = { "completion_rate": 1,  "success_job_ids": new_jobs, "status": 4}
         _patch_data(data, GS_URL, task_id)
     else:
         new_jobs = []
         for job in jobs:
-            job_id = crawler.get_job_id_by_url(job['url'])
-            if not job_exists(db, job_id):
+            if 'job_id' not in job:
+                job['job_id'] = crawler.get_job_id_by_url(job['url'])
+            if not job_exists(db, job['job_id']):
                 new_jobs.append(job)
         _crawl_individual_jobs(new_jobs, GS_URL, task_id, crawler, db)
 

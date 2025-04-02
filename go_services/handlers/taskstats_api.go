@@ -22,6 +22,8 @@ func GetTaskStats(c *gin.Context) {
 	var tasks []models.Task
 	startDateStr := c.Query("start_date")
 	endDateStr := c.Query("end_date")
+	jobType := c.Query("job_type")
+
 	now := time.Now()
 
 	var startDate, endDate time.Time
@@ -46,6 +48,9 @@ func GetTaskStats(c *gin.Context) {
 	startDateStr = startDate.Format("2006-01-02 15:04")
 	endDateStr = endDate.Format("2006-01-02 15:04")
 	taskQuery := database.DB.Where("date_time >= ? and date_time < ?", startDateStr, endDateStr)
+	if jobType != "" {
+		taskQuery = taskQuery.Where("job_type = ?", jobType)
+	}
 	if queryErr := taskQuery.Find(&tasks).Error; queryErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch tasks: " + queryErr.Error(),

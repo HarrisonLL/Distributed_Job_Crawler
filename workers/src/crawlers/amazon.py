@@ -55,14 +55,10 @@ class amazon(Crawler):
                 description = description_section.find_next('p')
                 if description:
                     job_details['description'] = description.get_text(separator='\n').strip()
-            basic_qualifications_heading = soup.find('h2', string='BASIC QUALIFICATIONS')
-            if basic_qualifications_heading:
-                basic_qualifications_section = basic_qualifications_heading.find_next('p')
-                if basic_qualifications_section:
-                    job_details['basic_qualifications'] = basic_qualifications_section.get_text(separator='\n').strip()
-            preferred_qualifications_heading = soup.find('h2', string='PREFERRED QUALIFICATIONS')
-            if preferred_qualifications_heading:
-                preferred_qualifications_section = preferred_qualifications_heading.find_next('p')
-                if preferred_qualifications_section:
-                    job_details['preferred_qualifications'] = preferred_qualifications_section.get_text(separator='\n').strip()
+            for qualification in ["BASIC", "PREFERRED"]:
+                qualification_section = soup.find('h2', string=f'{qualification} QUALIFICATIONS')
+                if qualification_section:
+                    qualification_content = qualification_section.find_next('p')
+                    if qualification_content:
+                        job_details['qualifications'] = qualification + ': \n' + qualification_content.get_text(separator='\n').strip()
         return job_details

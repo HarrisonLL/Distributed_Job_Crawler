@@ -31,9 +31,10 @@ func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetai
 	var jobs []utils.JobDetail
 	for _, jobID := range jobIDs {
 		var job struct {
-			Title       string `bson:"title"`
-			Description string `bson:"description"`
-			URL         string `bson:"url"`
+			Title          string `bson:"title"`
+			Description    string `bson:"description"`
+			Qualifications string `bson:"qualifications"`
+			URL            string `bson:"url"`
 		}
 		err := collection.FindOne(context.TODO(), bson.M{"id": jobID}).Decode(&job)
 		if err != nil {
@@ -41,9 +42,10 @@ func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetai
 			continue
 		}
 		jobs = append(jobs, utils.JobDetail{
-			Title:       job.Title,
-			Description: job.Description,
-			URL:         job.URL,
+			Title:          job.Title,
+			Description:    job.Description,
+			Qualifications: job.Qualifications,
+			URL:            job.URL,
 		})
 	}
 	return jobs, nil

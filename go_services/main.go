@@ -18,6 +18,7 @@ import (
 func startWeb() {
 	router := gin.Default()
 	// Static web pages
+	router.Delims("[[", "]]")
 	router.Static("/static", "./static")
 	router.LoadHTMLGlob("templates/*")
 	router.GET("/", func(c *gin.Context) {

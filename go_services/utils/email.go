@@ -9,9 +9,10 @@ import (
 )
 
 type JobDetail struct {
-	Title       string
-	Description string
-	URL         string
+	Title          string
+	Description    string
+	Qualifications string
+	URL            string
 }
 
 func SendEmail(username, email string, company string, jobs []JobDetail) error {
@@ -32,6 +33,7 @@ func SendEmail(username, email string, company string, jobs []JobDetail) error {
 	for _, job := range jobs {
 		messageBody.WriteString(fmt.Sprintf("<p><strong>Job Title:</strong> %s<br>\n", job.Title))
 		messageBody.WriteString(fmt.Sprintf("<strong>Description:</strong> %s<br>\n", job.Description))
+		messageBody.WriteString(fmt.Sprintf("<strong>Description:</strong> %s<br>\n", job.Qualifications))
 		messageBody.WriteString(fmt.Sprintf("<strong>URL:</strong> <a href=\"%s\">%s</a></p>\n", job.URL, job.URL))
 		messageBody.WriteString("<hr>\n")
 	}

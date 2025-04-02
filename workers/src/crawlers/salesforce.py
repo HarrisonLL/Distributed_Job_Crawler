@@ -3,6 +3,7 @@ import time
 from typing import List
 from bs4 import BeautifulSoup
 from .crawler import Crawler
+import re
 
 class salesforce(Crawler):
     def __init__(self, job_type, location):
@@ -57,22 +58,45 @@ class salesforce(Crawler):
             job_cards = soup.select("div.card.card-job")
             for card in job_cards:
                 title_tag = card.select_one("h3.card-title a")
+                if not title_tag:
+                    continue
                 title = title_tag.get_text(strip=True)
                 if self.job_type.lower() not in title.lower():
-                    continue
-                location_tags = card.select("ul.locations li")
-                if not title_tag:
                     continue
                 path = title_tag["href"]
                 url = "https://careers.salesforce.com" + path
                 job_id = self.get_job_id_by_url(path, pattern=r"/jobs/(jr\d+)")
-                
-                locations = [li.get_text(strip=True) for li in location_tags]
                 jobs.append({
                     "job_id": job_id,
                     "title": title,
                     "url": url,
-                    "location": ", ".join(locations),
                 })
             time.sleep(2)
         return jobs
+
+    def get_job_details(self, url) -> dict:
+        resp = requests.get(url)
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        title = soup.find('h1', class_='hero-heading')
+        title = title.text.strip() if title else None
+        location_block = soup.select_one('.job-meta .multi-locations-list')
+        locations = [li.text.strip() for li in location_block.find_all('li')] if location_block else []
+        posting_time_tag = soup.find('time')
+        posting_date = posting_time_tag['datetime'] if posting_time_tag else None
+        job_id_tag = soup.find(string=re.compile(r'JR\d+'))
+        job_id = job_id_tag.strip() if job_id_tag else None
+        salary_tags = soup.select('.job-meta li')
+        salaries = [tag.text.strip() for tag in salary_tags if 'Salary' in tag.text]
+        description_tag = soup.select_one('div.job-detail article.cms-content')
+        description = description_tag.get_text(separator='\n').strip() if description_tag else None
+        apply_link_tag = soup.select_one('.js-apply-now')
+        apply_url = apply_link_tag['href'] if apply_link_tag else None
+        return {
+            'title': title,
+            'locations': locations,
+            'posting_date': posting_date,
+            'job_id': job_id,
+            'salaries': salaries,
+            'description': description,
+            'apply_url': apply_url,
+        }

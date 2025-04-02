@@ -68,7 +68,7 @@ class meta(Crawler):
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             if soup.find('title') is not None:
-                job_details['job_title'] = soup.find('title').text
+                job_details['title'] = soup.find('title').text
             if soup.find('script', type='application/ld+json') is not None:
                 description_tag = soup.find('script', type='application/ld+json')
                 description_json = json.loads(description_tag.string)
