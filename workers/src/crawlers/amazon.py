@@ -60,5 +60,7 @@ class amazon(Crawler):
                 if qualification_section:
                     qualification_content = qualification_section.find_next('p')
                     if qualification_content:
-                        job_details['qualifications'] = qualification + ': \n' + qualification_content.get_text(separator='\n').strip()
+                        if 'qualifications' not in job_details:
+                            job_details['qualifications'] = ''
+                        job_details['qualifications'] += qualification + ': \n' + qualification_content.get_text(separator='\n').strip() + '\n'
         return job_details

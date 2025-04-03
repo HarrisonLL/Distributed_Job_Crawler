@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,7 +18,7 @@ import (
 
 // Debug allows preserve end docker container
 // So to use "docker logs <container-id>" to debug
-func RunDockerContainer(image string, envVars []string, volumeMappings []string, cmd []string, debug bool) (string, error) {
+func RunDockerContainer(image string, envVars []string, volumeMappings []string, cmd []string, debug bool, wg *sync.WaitGroup) (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", err
@@ -49,11 +50,12 @@ func RunDockerContainer(image string, envVars []string, volumeMappings []string,
 	}
 	log.Printf("Container %s started successfully\n", resp.ID)
 
-	if !debug {
+	if !debug && wg != nil {
 		// Start a goroutine to wait for the container to finish and then remove it,
 		// ContainerWait API will notify current goroutine thread by starting two channels (statusCh, errCh)
 		// Save logs only when container exit with error
 		go func(containerID string) {
+			defer wg.Done()
 			statusCh, errCh := cli.ContainerWait(context.Background(), containerID, container.WaitConditionNotRunning)
 			select {
 			case err := <-errCh:

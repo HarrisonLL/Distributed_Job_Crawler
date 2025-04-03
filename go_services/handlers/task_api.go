@@ -3,9 +3,7 @@ package handlers
 import (
 	"go_services/database"
 	"go_services/models"
-	"go_services/services"
 	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -64,30 +62,4 @@ func UpdateTask(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, task)
-
-	if task.Status == models.Completed && len(task.SuccessJobIDs) > 0 {
-		// send user email
-		var users []models.User
-		if err := database.DB.Where("email_subscription = ?", true).Find(&users).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		}
-
-		taskCompany := strings.ToLower(task.Company)
-		for _, user := range users {
-			userCompanies := strings.ToLower(user.Company)
-			if user.JobType == task.JobType && strings.Contains(userCompanies, taskCompany) {
-				if len(task.SuccessJobIDs) == 0 {
-					continue
-				}
-				emailData := map[string]interface{}{
-					"username": user.Username,
-					"email":    user.Email,
-					"company":  task.Company,
-					"jobIDs":   task.SuccessJobIDs,
-				}
-				services.StartEmailProducer(emailData)
-			}
-		}
-	}
-
 }

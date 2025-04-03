@@ -94,25 +94,37 @@ func StartEmailConsumer() {
 
 	go func() {
 		for d := range msgs {
-			var emailData struct {
-				Username string   `json:"username"`
-				Email    string   `json:"email"`
-				JobIDs   []string `json:"jobIDs"`
-				Company  string   `json:"company"`
-			}
-
+			var emailData map[string]interface{}
 			if err := json.Unmarshal(d.Body, &emailData); err != nil {
 				log.Printf("Failed to unmarshal message: %v", err)
 				continue
 			}
+			username := emailData["username"].(string)
+			email := emailData["email"].(string)
+			jobType := emailData["jobType"].(string)
 
-			jobs, err := fetchJobDetailsFromMongo(emailData.JobIDs, emailData.Company)
-			if err != nil {
-				log.Printf("Failed to fetch job details from MongoDB: %v", err)
-				continue
+			jobsByCompany := make(map[string][]utils.JobDetail)
+
+			for key, val := range emailData {
+				if key == "username" || key == "email" || key == "jobType" {
+					continue
+				}
+				company := key
+				jobIDsInterface := val.([]interface{})
+				var jobIDs []string
+				for _, id := range jobIDsInterface {
+					jobIDs = append(jobIDs, id.(string))
+				}
+
+				jobs, err := fetchJobDetailsFromMongo(jobIDs, company)
+				if err != nil {
+					log.Printf("Failed to fetch job details for %s: %v", company, err)
+					continue
+				}
+				jobsByCompany[company] = jobs
 			}
 
-			err = utils.SendEmail(emailData.Username, emailData.Email, emailData.Company, jobs)
+			err := utils.SendEmailByJobType(username, email, jobType, jobsByCompany)
 			if err != nil {
 				log.Printf("Failed to send email: %v", err)
 			}
