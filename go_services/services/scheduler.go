@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bytes"
 	"fmt"
 	"go_services/database"
 	"go_services/models"
@@ -9,13 +8,49 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+func ComposeEmailTask(taskIDs []string) {
+	var users []models.User
+	if err := database.DB.Where("email_subscription = ?", true).Find(&users).Error; err != nil {
+		log.Printf("Failed to fetch users: %v", err)
+	}
+	for _, user := range users {
+		if !user.EmailSubscription {
+			continue
+		}
+		userCompanies := strings.ToLower(user.Company)
+		userJobType := strings.ToLower(user.JobType)
+		emailData := map[string]interface{}{
+			"username": user.Username,
+			"email":    user.Email,
+			"jobType":  userJobType,
+		}
+		for _, taskID := range taskIDs {
+			var task models.Task
+			result := database.DB.Where("task_id = ?", taskID).First(&task)
+			if result.Error != nil {
+				log.Printf("Could not fetch task %s: %v", taskID, result.Error)
+				continue
+			}
+			if len(task.SuccessJobIDs) == 0 {
+				continue
+			}
+			if strings.Contains(userCompanies, task.Company) && strings.Contains(userJobType, task.JobType) {
+				emailData[task.Company] = task.SuccessJobIDs
+			}
+		}
+		if len(emailData) == 3 {
+			continue
+		}
+		StartEmailProducer(emailData)
+	}
+}
 
 func CrawlerTaskBase() {
 	mode := os.Getenv("MODE")
@@ -53,13 +88,13 @@ func CrawlerTaskBase() {
 		if mode == "docker" {
 			wg.Add(1)
 			go func(jobType models.JobType) {
-				cmd := []string{
+				dockerCmd := []string{
 					"--job_type", jobType.JobTypeName,
 					"--location", "USA",
 					"--company", jobType.CompanyName,
 					"--task_id", taskID,
 				}
-				containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, []string{}, cmd, false, &wg)
+				containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, []string{}, dockerCmd, false, &wg)
 				if err != nil {
 					log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
 				} else {
@@ -82,66 +117,14 @@ func CrawlerTaskBase() {
 				)
 				pythonCmd.Env = append(os.Environ(), envVars...)
 				pythonCmd.Dir = pythonCmdDir
-				var stderr bytes.Buffer
-				pythonCmd.Stderr = &stderr
-				if err := pythonCmd.Start(); err != nil {
-					log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err, stderr.String())
-				} else {
-					PID := strconv.Itoa(pythonCmd.Process.Pid)
-					log.Printf("Started Python crawler for company %s", jobType.CompanyName)
-					err = database.CreateTask(taskID, PID, jobType.CompanyName, jobType.JobTypeName, "USA")
-					if err != nil {
-						log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
-					}
-					// Start a thread to wait till process finishes and release its resource
-					go func() {
-						defer wg.Done()
-						if err := pythonCmd.Wait(); err != nil {
-							log.Printf("Python crawler for company %s finished with error: %v", jobType.CompanyName, err)
-							DBerr := database.UpdateTaskStatus(taskID, "", models.Error)
-							if err != nil {
-								log.Printf("Failed to update task %s: %v", taskID, DBerr)
-							}
-						} else {
-							log.Printf("Python crawler for company %s finished successfully", jobType.CompanyName)
-						}
-					}()
-				}
+				utils.RunProcessOnHost(pythonCmd, jobType, taskID, &wg)
 			}(jobType)
 		}
 	}
+
 	wg.Wait()
 	log.Printf("All Crawler Finished!")
-
 	// send to queue
-	var users []models.User
-	if err := database.DB.Where("email_subscription = ?", true).Find(&users).Error; err != nil {
-		log.Printf("Failed to fetch users: %v", err)
-	}
-
-	for _, user := range users {
-		userCompanies := strings.ToLower(user.Company)
-		userJobType := strings.ToLower(user.JobType)
-		emailData := map[string]interface{}{
-			"username": user.Username,
-			"email":    user.Email,
-			"jobType":  userJobType,
-		}
-		for _, taskID := range taskIDs {
-			var task models.Task
-			result := database.DB.Where("task_id = ?", taskID).First(&task)
-			if result.Error != nil {
-				log.Printf("Could not fetch task %s: %v", taskID, result.Error)
-				continue
-			}
-			if len(task.SuccessJobIDs) == 0 {
-				continue
-			}
-			if strings.Contains(userCompanies, task.Company) && strings.Contains(userJobType, task.JobType) {
-				emailData[task.Company] = task.SuccessJobIDs
-			}
-		}
-		StartEmailProducer(emailData)
-	}
+	ComposeEmailTask(taskIDs)
 
 }
