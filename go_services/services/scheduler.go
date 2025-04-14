@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -53,61 +52,32 @@ func ComposeEmailTask(taskIDs []string) {
 }
 
 func CrawlerTaskBase() {
-	mode := os.Getenv("MODE")
+	concurrency := utils.GetConcurrency()
+	mode := utils.GetMode()
+	mongoURL, err := utils.GetURL("MONGOURL")
+	if err != "" {
+		log.Fatalf("Failed to get MONGOURL: %v", err)
+	}
+	gsURL, err := utils.GetURL("GS_URL")
+	if err != "" {
+		log.Fatalf("Failed to get GS_URL: %v", err)
+	}
+
+	var taskIDs []string
 	var jobTypes []models.JobType
 	if err := database.DB.Find(&jobTypes).Error; err != nil {
 		log.Fatalf("Failed to fetch job types: %v", err)
 	}
-	var wg sync.WaitGroup
-	var taskIDs []string
-	for _, jobType := range jobTypes {
-		if mode == "docker" {
-			imageID, err := utils.PullDockerImage(jobType.DockerImageName)
-			if err != nil {
-				log.Printf("Failed to pull Docker image for company %s: %v", jobType.CompanyName, err)
-				continue
-			}
-			if jobType.DockerImageID != imageID {
-				jobType.DockerImageID = imageID
-				jobType.PullDate = time.Now().Format(time.RFC3339)
-				if err := database.DB.Save(&jobType).Error; err != nil {
-					log.Printf("Failed to update Docker image for company %s: %v", jobType.CompanyName, err)
-					continue
-				}
-			}
-		}
-
-		taskID := uuid.New().String()
-		taskIDs = append(taskIDs, taskID)
-		envVars := []string{
-			fmt.Sprintf("MONGOURL=%s", os.Getenv("MONGOURL")),
-			fmt.Sprintf("GS_URL=%s", os.Getenv("GS_URL")),
-		}
-
-		// Start the crawler work
-		if mode == "docker" {
-			wg.Add(1)
-			go func(jobType models.JobType) {
-				dockerCmd := []string{
-					"--job_type", jobType.JobTypeName,
-					"--location", "USA",
-					"--company", jobType.CompanyName,
-					"--task_id", taskID,
-				}
-				containerID, err := utils.RunDockerContainer(jobType.DockerImageName, envVars, []string{}, dockerCmd, false, &wg)
-				if err != nil {
-					log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
-				} else {
-					log.Printf("Started container %s for company %s", containerID, jobType.CompanyName)
-					err = database.CreateTask(taskID, containerID, jobType.CompanyName, jobType.JobTypeName, "USA")
-					if err != nil {
-						log.Printf("Failed to create task for company %s: %v", jobType.CompanyName, err)
-					}
-				}
-			}(jobType)
-		} else {
-			wg.Add(1)
-			go func(jobType models.JobType) {
+	envVars := []string{
+		fmt.Sprintf("MONGOURL=%s", mongoURL),
+		fmt.Sprintf("GS_URL=%s", gsURL),
+	}
+	if concurrency == 1 {
+		// Blocking mode
+		for _, jobType := range jobTypes {
+			taskID := uuid.New().String()
+			if mode == "host" {
+				taskIDs = append(taskIDs, taskID)
 				pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 				pythonCmd := exec.Command("python3", "main.py",
 					"--job_type", jobType.JobTypeName,
@@ -117,14 +87,67 @@ func CrawlerTaskBase() {
 				)
 				pythonCmd.Env = append(os.Environ(), envVars...)
 				pythonCmd.Dir = pythonCmdDir
-				utils.RunProcessOnHost(pythonCmd, jobType, taskID, &wg)
-			}(jobType)
+				utils.RunProcessOnHost(pythonCmd, jobType, taskID, nil, nil, true)
+			} else if mode == "docker" {
+				taskIDs = append(taskIDs, taskID)
+				dockerCmd := []string{
+					"--job_type", jobType.JobTypeName,
+					"--location", "USA",
+					"--company", jobType.CompanyName,
+					"--task_id", taskID,
+				}
+				utils.RunDockerContainer(envVars, []string{}, dockerCmd, jobType, taskID, false, nil, nil, false)
+			} else {
+				log.Fatalf("Invalid mode: %s", mode)
+				return
+			}
 		}
+		log.Printf("All Crawler Finished!")
+		// Send msg to email queue
+		ComposeEmailTask(taskIDs)
+
+	} else {
+		// Nonblocking mode
+		sem := make(chan struct{}, concurrency)
+		var wg sync.WaitGroup
+		for _, jobType := range jobTypes {
+			wg.Add(1)
+			taskID := uuid.New().String()
+			if mode == "host" {
+				go func(jobType models.JobType) {
+					pythonCmdDir := os.Getenv("PYTHONFILEPATH")
+					pythonCmd := exec.Command("python3", "main.py",
+						"--job_type", jobType.JobTypeName,
+						"--location", "USA",
+						"--company", jobType.CompanyName,
+						"--task_id", taskID,
+					)
+					pythonCmd.Env = append(os.Environ(), envVars...)
+					pythonCmd.Dir = pythonCmdDir
+					sem <- struct{}{}                // Acquire a token
+					releaseToken := func() { <-sem } // Release token when done
+					utils.RunProcessOnHost(pythonCmd, jobType, taskID, releaseToken, &wg, false)
+				}(jobType)
+			} else if mode == "docker" {
+				go func(jobType models.JobType) {
+					dockerCmd := []string{
+						"--job_type", jobType.JobTypeName,
+						"--location", "USA",
+						"--company", jobType.CompanyName,
+						"--task_id", taskID,
+					}
+					sem <- struct{}{}                // Acquire a token
+					releaseToken := func() { <-sem } // Release the token when done
+					utils.RunDockerContainer(envVars, []string{}, dockerCmd, jobType, taskID, false, releaseToken, &wg, false)
+				}(jobType)
+			} else {
+				log.Fatalf("Invalid mode: %s", mode)
+				return
+			}
+		}
+		wg.Wait()
+		log.Printf("All Crawler Finished!")
+		// Send msg to email queue
+		ComposeEmailTask(taskIDs)
 	}
-
-	wg.Wait()
-	log.Printf("All Crawler Finished!")
-	// send to queue
-	ComposeEmailTask(taskIDs)
-
 }
