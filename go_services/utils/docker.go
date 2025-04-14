@@ -70,7 +70,6 @@ func RunDockerContainer(envVars []string, volumeMappings []string, cmd []string,
 			handleContainerFinish(cli, resp.ID)
 		}
 	} else if !debug && wg != nil {
-		wg.Add(1)
 		go func(containerID string) {
 			defer wg.Done()
 			defer releaseToken()
