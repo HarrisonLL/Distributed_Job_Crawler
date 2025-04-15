@@ -114,6 +114,7 @@ func CrawlerTaskBase() {
 			wg.Add(1)
 			taskID := uuid.New().String()
 			if mode == "host" {
+				taskIDs = append(taskIDs, taskID)
 				go func(jobType models.JobType) {
 					pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 					pythonCmd := exec.Command("python3", "main.py",
@@ -129,6 +130,7 @@ func CrawlerTaskBase() {
 					utils.RunProcessOnHost(pythonCmd, jobType, taskID, releaseToken, &wg, false)
 				}(jobType)
 			} else if mode == "docker" {
+				taskIDs = append(taskIDs, taskID)
 				go func(jobType models.JobType) {
 					dockerCmd := []string{
 						"--job_type", jobType.JobTypeName,
