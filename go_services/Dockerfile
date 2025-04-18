@@ -9,5 +9,6 @@ FROM alpine:latest
 RUN apk add --no-cache docker-cli
 COPY --from=builder /app/main .
 COPY ./static ./static
+COPY ./templates ./templates
 EXPOSE 8080
 CMD ["./main"]

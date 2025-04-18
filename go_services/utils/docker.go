@@ -30,7 +30,7 @@ func RunDockerContainer(envVars []string, volumeMappings []string, cmd []string,
 		Binds: volumeMappings,
 	}
 	config := &container.Config{
-		Image: jobType.DockerImageID,
+		Image: jobType.DockerImageName,
 		Cmd:   cmd,
 		Env:   envVars,
 	}
@@ -49,7 +49,6 @@ func RunDockerContainer(envVars []string, volumeMappings []string, cmd []string,
 		log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
 		return
 	}
-	log.Printf("Container %s started successfully\n", resp.ID)
 	// Create task record to DB
 	log.Printf("Started container %s for company %s", resp.ID, jobType.CompanyName)
 	err = database.CreateTask(taskId, resp.ID, jobType.CompanyName, jobType.JobTypeName, "USA")

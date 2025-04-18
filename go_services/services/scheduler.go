@@ -96,7 +96,7 @@ func CrawlerTaskBase() {
 					"--company", jobType.CompanyName,
 					"--task_id", taskID,
 				}
-				utils.RunDockerContainer(envVars, []string{}, dockerCmd, jobType, taskID, false, nil, nil, false)
+				utils.RunDockerContainer(envVars, []string{}, dockerCmd, jobType, taskID, false, nil, nil, true)
 			} else {
 				log.Fatalf("Invalid mode: %s", mode)
 				return

@@ -15,7 +15,7 @@ func RunProcessOnHost(pythonCmd *exec.Cmd, jobType models.JobType, taskID string
 	pythonCmd.Stderr = &stderr
 	err := pythonCmd.Start()
 	if err != nil {
-		log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err, stderr.String())
+		log.Printf("Failed to start crawler for company %s: %v", jobType.CompanyName, err)
 		if wg != nil {
 			wg.Done()
 		}
