@@ -52,7 +52,6 @@ def _crawl_individual_jobs(new_jobs:List[dict], stored_job_ids: List[str], GS_UR
         "success_job_ids": success,
         "status": 4
     }
-    print(success, flush=True)
     _patch_data(data, GS_URL, task_id)
 
 def process_task(company: str, job_type: str, location: str, task_id: str):
@@ -91,7 +90,6 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
         _patch_data({"status": 4}, GS_URL, task_id)
         return
 
-    print(new_jobs, stored_job_ids, flush=True)
     # Parse webpage and save new job to DB
     if company in ['google', 'uber']: 
         # companies that skip parsing step
