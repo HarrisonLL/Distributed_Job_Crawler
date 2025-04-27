@@ -41,7 +41,14 @@ class meta(Crawler):
         jobs = []
         query = f"?q={self.job_type.replace(' ', '%20')}"
         query += "&leadership_levels[0]=Individual%20Contributor&sort_by_new=true&roles[0]=Full%20time%20employment"
-        query += "&offices[0]=Menlo%20Park%2C%20CA&offices[1]=Seattle%2C%20WA&offices[2]=New%20York%2C%20NY"
+        if self.location == 'new york':
+            query += "&offices[0]=New%20York%2C%20NY"
+        elif self.location == 'washington':
+            query += "&offices[0]=Seattle%2C%20WA"
+        elif self.location == 'california':
+            query += "&offices[0]=Menlo%20Park%2C%20CA"
+        else:
+            query += "&offices[0]=Menlo%20Park%2C%20CA&offices[1]=Seattle%2C%20WA&offices[2]=New%20York%2C%20NY"
         parsed = self._parse_job_page(self.METAURL + query)
         for j in parsed:
             location = "N/A"

@@ -19,3 +19,15 @@ def save_job_url_to_db(db, job_id, url):
 def save_job_details_to_db(db, job_id, job_details):
     jobs_collection = db['jobs']
     jobs_collection.update_one({'id': job_id}, {'$set': job_details})
+
+def get_job_type(db, job_id):
+    jobs_collection = db['jobs']
+    job = jobs_collection.find_one({'id': job_id})
+    return job['job_types'] if job and 'job_types' in job else []
+
+def save_job_type_to_db(db, job_id, job_type, updated_time):
+    jobs_collection = db['jobs']
+    job_details = jobs_collection.find_one({'id': job_id})
+    job_details['job_types'] = job_type
+    job_details['crawled_datetime'] = updated_time
+    jobs_collection.update_one({'id': job_id}, {'$set': job_details})

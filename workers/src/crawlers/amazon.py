@@ -18,7 +18,9 @@ class amazon(Crawler):
         jobs = []
         for i in range(0, 10*self.max_page, 10):
             query = f"search?offset={i}&result_limit=10&sort=recent"
-            query += f"&base_query={self.job_type}&country={self.location}"
+            query += f"&base_query={self.job_type}&country=USA"
+            if self.location != "USA":
+                query += f"&state%5B%5D={self.location.capitalize()}"
             url = self.AMAZONURL + query
             self.driver.get(url)
             time.sleep(5)

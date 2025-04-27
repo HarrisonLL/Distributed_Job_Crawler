@@ -3,7 +3,7 @@ import argparse
 import os, json, requests, logging
 from crawlers import amazon, meta, google, uber, salesforce
 from typing import List
-from mongo_client import get_db, job_exists, save_job_url_to_db, save_job_details_to_db
+from mongo_client import get_db, job_exists, save_job_url_to_db, save_job_details_to_db, save_job_type_to_db, get_job_type
 
 logging.basicConfig(format="[%(asctime)s] [%(levelname)s] - %(message)s")
 logger = logging.getLogger()
@@ -27,7 +27,7 @@ def _patch_data(data: dict, GS_URL:str, task_id:str) -> None:
     if res.status_code != 200:
         logger.warning(f'PATCH Task {task_id} {res.status_code} {res.json()}')
 
-def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler, db) -> None:
+def _crawl_individual_jobs(new_jobs:List[dict], stored_job_ids: List[str], GS_URL:str, task_id:str, job_type:str, crawler, db) -> None:
     success = []
     for job in new_jobs:
         try:
@@ -39,17 +39,20 @@ def _crawl_individual_jobs(new_jobs:List[str], GS_URL:str, task_id:str, crawler,
             continue
         else: # only when success then save entry
             details["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            details["job_types"] = [job_type]
             try:
-                save_job_url_to_db(db, job['job_id'], job['url'])
-                save_job_details_to_db(db, job['job_id'], details)
-                success.append(job['job_id'])
+                save_job_url_to_db(db, job["job_id"], job["url"])
+                save_job_details_to_db(db, job["job_id"], details)
+                success.append(job["job_id"])
             except Exception as e:
                 logger.error(e, exc_info=True)
+    success += stored_job_ids
     data = {
-        "completion_rate": 1,
+        "completion_rate": len(success) / len(new_jobs),
         "success_job_ids": success,
         "status": 4
     }
+    print(success, flush=True)
     _patch_data(data, GS_URL, task_id)
 
 def process_task(company: str, job_type: str, location: str, task_id: str):
@@ -63,29 +66,51 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
         logger.error(e, exc_info=True)
         _patch_data({"status": 3}, GS_URL, task_id)
         return
+    # Check if found jobs are already in DB and perform duplication check
     if len(jobs) == 0:
-        logger.info('No new jobs are found.')
+        logger.info("No new jobs are found.")
         _patch_data({"status": 4}, GS_URL, task_id)
         return
     
-    if company in ['google', 'uber']: # companies that skip parsing step
-        new_jobs = []
-        for job in jobs:
-            if not job_exists(db, job['job_id']):
-                job["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-                save_job_url_to_db(db, job['job_id'], job['url'])
-                save_job_details_to_db(db, job['job_id'], job)
-                new_jobs.append(job['job_id'])
-        data = { "completion_rate": 1,  "success_job_ids": new_jobs, "status": 4}
+    new_jobs = []
+    stored_job_ids = []
+    for job in jobs:
+        if 'job_id' not in job:
+            job['job_id'] = crawler.get_job_id_by_url(job['url'])
+        if not job_exists(db, job['job_id']):
+            new_jobs.append(job)
+        else:
+            stored_job_types = get_job_type(db, job['job_id'])
+            if job_type not in stored_job_types:
+                stored_job_types.append(job_type)
+                current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+                save_job_type_to_db(db, job['job_id'], stored_job_types, current_time)
+                stored_job_ids.append(job['job_id'])
+    if len(new_jobs) == 0 and len(stored_job_ids) == 0:
+        logger.info("No new jobs are found.")
+        _patch_data({"status": 4}, GS_URL, task_id)
+        return
+
+    print(new_jobs, stored_job_ids, flush=True)
+    # Parse webpage and save new job to DB
+    if company in ['google', 'uber']: 
+        # companies that skip parsing step
+        for job in new_jobs:
+            job["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            job["job_types"] = [job_type]
+            save_job_url_to_db(db, job["job_id"], job["url"])
+            save_job_details_to_db(db, job["job_id"], job)
+        ret_job_ids = [job["job_id"] for job in new_jobs] + stored_job_ids
+        data = { "completion_rate": 1,  "success_job_ids": ret_job_ids, "status": 4}
         _patch_data(data, GS_URL, task_id)
-    else:
-        new_jobs = []
-        for job in jobs:
-            if 'job_id' not in job:
-                job['job_id'] = crawler.get_job_id_by_url(job['url'])
-            if not job_exists(db, job['job_id']):
-                new_jobs.append(job)
-        _crawl_individual_jobs(new_jobs, GS_URL, task_id, crawler, db)
+    else: 
+        # companies that need parsing step
+        if len(new_jobs) > 0:
+            _crawl_individual_jobs(new_jobs, stored_job_ids, GS_URL, task_id, job_type, crawler, db)
+        else:
+            data = { "completion_rate": 1,  "success_job_ids": stored_job_ids, "status": 4}
+            _patch_data(data, GS_URL, task_id)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Job Crawler Script')

@@ -21,9 +21,9 @@ class uber(Crawler):
 
     def get_jobs(self) -> List[dict]:
         city_filters = []
-        if self.location.lower() == "san francisco":
+        if self.location.lower() == "california":
             city_filters.append({"country": "USA", "region": "California", "city": "San Francisco"})
-        elif self.location.lower() == "seattle":
+        elif self.location.lower() == "washington":
             city_filters.append({"country": "USA", "region": "Washington", "city": "Seattle"})
         elif self.location.lower() == "new york":
             city_filters.append({"country": "USA", "region": "New York", "city": "New York"})
@@ -50,6 +50,8 @@ class uber(Crawler):
             data = response.json()
             results = data.get("data", {}).get("results", [])
             for job in results:
+                if self.job_type not in job["title"]:
+                    continue
                 job_id = str(job["id"])
                 jobs.append({
                     "job_id": job_id,

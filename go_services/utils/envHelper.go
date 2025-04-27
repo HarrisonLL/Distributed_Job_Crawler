@@ -21,6 +21,14 @@ func GetMode() string {
 	return mode
 }
 
+func GetLocation() string {
+	location := "USA"
+	if val := os.Getenv("LOCATION"); val != "" {
+		location = val
+	}
+	return location
+}
+
 func GetURL(service string) (string, string) {
 	if val := os.Getenv(service); val != "" {
 		return val, ""

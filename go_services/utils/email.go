@@ -33,10 +33,10 @@ func SendEmailByJobType(username, email, jobType string, jobsByCompany map[strin
 	for company, jobs := range jobsByCompany {
 		messageBody.WriteString(fmt.Sprintf("<h3><i>%s</i></h3>\n", strings.Title(company)))
 		for _, job := range jobs {
-			messageBody.WriteString(fmt.Sprintf("<p><strong>Job Title:</strong> %s<br>\n", job.Title))
+			messageBody.WriteString(fmt.Sprintf("<p style=\"font-size: 16px;\"><strong>Job Title:</strong> %s<br>\n", job.Title))
 			messageBody.WriteString(fmt.Sprintf("<strong>Description:</strong> %s<br>\n", job.Description))
 			messageBody.WriteString(fmt.Sprintf("<strong>Qualifications:</strong> %s<br>\n", job.Qualifications))
-			messageBody.WriteString(fmt.Sprintf("<strong>URL:</strong> <a href=\"%s\">%s</a></p>\n", job.URL, job.URL))
+			messageBody.WriteString(fmt.Sprintf("<strong>URL:</strong> <a href=\"%s\">%s</a></p style=\"font-size: 16px;\">\n", job.URL, job.URL))
 			messageBody.WriteString("<hr>\n")
 		}
 	}

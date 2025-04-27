@@ -55,6 +55,7 @@ func CrawlerTaskBase() {
 	concurrency := utils.GetConcurrency()
 	mode := utils.GetMode()
 	mongoURL, err := utils.GetURL("MONGOURL")
+	location := utils.GetLocation()
 	if err != "" {
 		log.Fatalf("Failed to get MONGOURL: %v", err)
 	}
@@ -81,7 +82,7 @@ func CrawlerTaskBase() {
 				pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 				pythonCmd := exec.Command("python3", "main.py",
 					"--job_type", jobType.JobTypeName,
-					"--location", "USA",
+					"--location", location,
 					"--company", jobType.CompanyName,
 					"--task_id", taskID,
 				)
@@ -92,7 +93,7 @@ func CrawlerTaskBase() {
 				taskIDs = append(taskIDs, taskID)
 				dockerCmd := []string{
 					"--job_type", jobType.JobTypeName,
-					"--location", "USA",
+					"--location", location,
 					"--company", jobType.CompanyName,
 					"--task_id", taskID,
 				}
@@ -119,7 +120,7 @@ func CrawlerTaskBase() {
 					pythonCmdDir := os.Getenv("PYTHONFILEPATH")
 					pythonCmd := exec.Command("python3", "main.py",
 						"--job_type", jobType.JobTypeName,
-						"--location", "USA",
+						"--location", location,
 						"--company", jobType.CompanyName,
 						"--task_id", taskID,
 					)
@@ -134,7 +135,7 @@ func CrawlerTaskBase() {
 				go func(jobType models.JobType) {
 					dockerCmd := []string{
 						"--job_type", jobType.JobTypeName,
-						"--location", "USA",
+						"--location", location,
 						"--company", jobType.CompanyName,
 						"--task_id", taskID,
 					}

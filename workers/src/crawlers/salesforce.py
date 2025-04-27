@@ -36,7 +36,7 @@ class salesforce(Crawler):
         if not self.location:
             return ""
         region_params = []
-        if self.location.lower() in  self.region_map:
+        if self.location.lower() in self.region_map:
             region_params.append(f"&region={self.region_map[self.location.lower()]}")
         return "".join(region_params)
 
