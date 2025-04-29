@@ -2,7 +2,7 @@ from typing import List
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from crawlers.crawler import Crawler
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 import time
 import requests
 
@@ -37,6 +37,25 @@ class amazon(Crawler):
         self.driver.quit()
         return jobs
     
+    @staticmethod
+    def _strip_text_after_two_br(html: str) -> str:
+        soup = BeautifulSoup(html, 'html.parser')
+        p_tag = soup.find('p')
+        if not p_tag:
+            return ""
+        contents = p_tag.contents
+        for i in range(len(contents) - 1):
+            if isinstance(contents[i], Tag) and contents[i].name == 'br' and \
+            isinstance(contents[i+1], Tag) and contents[i+1].name == 'br':
+                new_contents = contents[:i]
+                break
+        else:
+            new_contents = contents
+        new_p = soup.new_tag('p')
+        for item in new_contents:
+            new_p.append(item)
+        return new_p.get_text(separator='\n').strip()
+
     def get_job_details(self, url) -> dict:
         response = requests.get(url)
         max_retry = 3
@@ -64,5 +83,6 @@ class amazon(Crawler):
                     if qualification_content:
                         if 'qualifications' not in job_details:
                             job_details['qualifications'] = ''
-                        job_details['qualifications'] += qualification + ': \n' + qualification_content.get_text(separator='\n').strip() + '\n'
+                        qualification_content = amazon._strip_text_after_two_br(str(qualification_content))
+                        job_details['qualifications'] += qualification + ': \n' + qualification_content + '\n'
         return job_details

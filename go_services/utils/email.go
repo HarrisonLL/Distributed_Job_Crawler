@@ -33,11 +33,15 @@ func SendEmailByJobType(username, email, jobType string, jobsByCompany map[strin
 	for company, jobs := range jobsByCompany {
 		messageBody.WriteString(fmt.Sprintf("<h3><i>%s</i></h3>\n", strings.Title(company)))
 		for _, job := range jobs {
-			messageBody.WriteString(fmt.Sprintf("<p style=\"font-size: 16px;\"><strong>Job Title:</strong> %s<br>\n", job.Title))
-			messageBody.WriteString(fmt.Sprintf("<strong>Description:</strong> %s<br>\n", job.Description))
-			messageBody.WriteString(fmt.Sprintf("<strong>Qualifications:</strong> %s<br>\n", job.Qualifications))
-			messageBody.WriteString(fmt.Sprintf("<strong>URL:</strong> <a href=\"%s\">%s</a></p style=\"font-size: 16px;\">\n", job.URL, job.URL))
-			messageBody.WriteString("<hr>\n")
+			descriptionWithBreaks := strings.ReplaceAll(job.Description, "\n", "<br>")
+			qualificationsWithBreaks := strings.ReplaceAll(job.Qualifications, "\n", "<br>")
+			messageBody.WriteString("<p style=\"font-size: 16px;\"><strong>Job Title:</strong> " + job.Title + "<br></p>\n")
+			messageBody.WriteString("<p style=\"font-size: 16px;\"><strong>Description:</strong><br></p>\n")
+			messageBody.WriteString(fmt.Sprintf("<div style=\"padding-left: 20px; font-size: 15px;\">%s</div><br>\n", descriptionWithBreaks))
+			messageBody.WriteString("<p style=\"font-size: 16px;\"><strong>Qualifications:</strong><br></p>\n")
+			messageBody.WriteString(fmt.Sprintf("<div style=\"padding-left: 20px; font-size: 15px;\">%s</div><br>\n", qualificationsWithBreaks))
+			messageBody.WriteString(fmt.Sprintf("<strong>URL:</strong> <a href=\"%s\">%s</a><br>\n", job.URL, job.URL))
+			messageBody.WriteString("<hr style=\"border: 1.5px solid #333333; margin: 20px 0;\">\n")
 		}
 	}
 
