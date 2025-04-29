@@ -6,6 +6,7 @@ import (
 	"go_services/database"
 	"go_services/handlers"
 	"go_services/services"
+	"go_services/utils"
 	"log"
 	"time"
 
@@ -44,7 +45,7 @@ func startWeb() {
 
 func startScheduler() {
 	s := gocron.NewScheduler(time.UTC)
-	s.Every(2).Hours().Do(services.CrawlerTaskBase)
+	s.Every(utils.GetCrawlingTimeInterval()).Hours().Do(services.CrawlerTaskBase)
 	s.StartBlocking()
 }
 

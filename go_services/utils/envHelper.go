@@ -29,6 +29,14 @@ func GetLocation() string {
 	return location
 }
 
+func GetCrawlingTimeInterval() int {
+	timeInterval := 2
+	if val := os.Getenv("TIMEINTERVAL"); val != "" {
+		timeInterval, _ = strconv.Atoi(val)
+	}
+	return timeInterval
+}
+
 func GetURL(service string) (string, string) {
 	if val := os.Getenv(service); val != "" {
 		return val, ""
