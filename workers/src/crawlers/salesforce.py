@@ -74,6 +74,23 @@ class salesforce(Crawler):
             time.sleep(2)
         return jobs
 
+    @staticmethod
+    def _split_description_and_qualification(full_text):
+        patterns = [
+            r"(Required Skills:)", r"(Minimum Requirements:)", r"(Basic Qualifications:)", 
+            r"(Requirements:)", r"(Qualifications:)", r"(What you should have:)", 
+        ]
+        description = full_text
+        qualifications = ""
+        for pattern in patterns:
+            match = re.search(pattern, full_text, flags=re.IGNORECASE)
+            if match:
+                split_index = match.start()
+                description = full_text[:split_index].strip()
+                qualifications = full_text[split_index:].strip()
+                break 
+        return description, qualifications
+
     def get_job_details(self, url) -> dict:
         resp = requests.get(url)
         soup = BeautifulSoup(resp.text, 'html.parser')
@@ -88,7 +105,10 @@ class salesforce(Crawler):
         salary_tags = soup.select('.job-meta li')
         salaries = [tag.text.strip() for tag in salary_tags if 'Salary' in tag.text]
         description_tag = soup.select_one('div.job-detail article.cms-content')
-        description = description_tag.get_text(separator='\n').strip() if description_tag else None
+        description = description_tag.get_text(separator='\n').strip() if description_tag else ""
+        if description.lower().startswith("description"):
+            description = description[len("description"):].strip()
+        description, qualifications = salesforce._split_description_and_qualification(description)
         apply_link_tag = soup.select_one('.js-apply-now')
         apply_url = apply_link_tag['href'] if apply_link_tag else None
         return {
@@ -98,5 +118,6 @@ class salesforce(Crawler):
             'job_id': job_id,
             'salaries': salaries,
             'description': description,
+            'qualifications': qualifications,
             'apply_url': apply_url,
         }
