@@ -27,26 +27,55 @@ func initMongoDB() {
 }
 
 func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetail, error) {
-	collection := mongoClient.Database(fmt.Sprintf("%s_jobcrawler", strings.ToLower(company))).Collection("jobs")
+	dbName := fmt.Sprintf("%s_jobcrawler", strings.ToLower(company))
+	collection := mongoClient.Database(dbName).Collection("jobs")
+
 	var jobs []utils.JobDetail
+
 	for _, jobID := range jobIDs {
-		var job struct {
-			Title          string `bson:"title"`
-			Description    string `bson:"description"`
-			Qualifications string `bson:"qualifications"`
-			URL            string `bson:"url"`
+		if strings.ToLower(company) == "linkedin_posts" {
+			var doc struct {
+				JobPosts []struct {
+					Title       string `bson:"title"`
+					Company     string `bson:"company"`
+					Link        string `bson:"link"`
+					PostingDate string `bson:"posting_date"`
+				} `bson:"job_posts"`
+			}
+			err := collection.FindOne(context.TODO(), bson.M{"id": jobID}).Decode(&doc)
+			if err != nil {
+				log.Printf("Failed to fetch LinkedIn job list for id %s: %v", jobID, err)
+				continue
+			}
+			for _, post := range doc.JobPosts {
+				jobs = append(jobs, utils.JobDetail{
+					Title:          post.Title,
+					URL:            post.Link,
+					Description:    "",
+					Qualifications: post.PostingDate,
+					Company:        post.Company,
+				})
+			}
+			jobs = utils.DedupAndSortLinkedInJobs(jobs)
+		} else {
+			var job struct {
+				Title          string `bson:"title"`
+				Description    string `bson:"description"`
+				Qualifications string `bson:"qualifications"`
+				URL            string `bson:"url"`
+			}
+			err := collection.FindOne(context.TODO(), bson.M{"id": jobID}).Decode(&job)
+			if err != nil {
+				log.Printf("Failed to fetch job details for jobID %s: %v", jobID, err)
+				continue
+			}
+			jobs = append(jobs, utils.JobDetail{
+				Title:          job.Title,
+				Description:    job.Description,
+				Qualifications: job.Qualifications,
+				URL:            job.URL,
+			})
 		}
-		err := collection.FindOne(context.TODO(), bson.M{"id": jobID}).Decode(&job)
-		if err != nil {
-			log.Printf("Failed to fetch job details for jobID %s: %v", jobID, err)
-			continue
-		}
-		jobs = append(jobs, utils.JobDetail{
-			Title:          job.Title,
-			Description:    job.Description,
-			Qualifications: job.Qualifications,
-			URL:            job.URL,
-		})
 	}
 	return jobs, nil
 }

@@ -1,7 +1,7 @@
 import datetime
 import argparse
 import os, json, requests, logging
-from crawlers import amazon, meta, google, uber, salesforce
+from crawlers import amazon, meta, google, uber, salesforce, linkedinPosts
 from typing import List
 from mongo_client import get_db, job_exists, save_job_url_to_db, save_job_details_to_db, save_job_type_to_db, get_job_type
 
@@ -14,7 +14,8 @@ def init_crawler(company: str, job_type: str, location: str):
         'meta': meta.meta(job_type, location),
         'google': google.google(job_type, location),
         'uber': uber.uber(job_type, location),
-        'salesforce': salesforce.salesforce(job_type, location)
+        'salesforce': salesforce.salesforce(job_type, location),
+        'linkedin_posts': linkedinPosts.linkedInPosts(job_type, location)
     }
     if company.lower() not in crawlers:
         raise ValueError('Current company not supported')
@@ -65,33 +66,47 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
         logger.error(e, exc_info=True)
         _patch_data({"status": 3}, GS_URL, task_id)
         return
-    # Check if found jobs are already in DB and perform duplication check
+    
     if len(jobs) == 0:
         logger.info("No new jobs are found.")
         _patch_data({"status": 4}, GS_URL, task_id)
         return
     
-    new_jobs = []
-    stored_job_ids = []
-    for job in jobs:
-        if 'job_id' not in job:
-            job['job_id'] = crawler.get_job_id_by_url(job['url'])
-        if not job_exists(db, job['job_id']):
-            new_jobs.append(job)
-        else:
-            stored_job_types = get_job_type(db, job['job_id'])
-            if job_type not in stored_job_types:
-                stored_job_types.append(job_type)
-                current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-                save_job_type_to_db(db, job['job_id'], stored_job_types, current_time)
-                stored_job_ids.append(job['job_id'])
-    if len(new_jobs) == 0 and len(stored_job_ids) == 0:
-        logger.info("No new jobs are found.")
-        _patch_data({"status": 4}, GS_URL, task_id)
+    if company == "linkedin_posts":
+        current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+        key = f"{job_type}:{current_time}"
+        linkedin_jobs = {
+            "id": key,
+            "crawled_datetime":  current_time,
+            "job_posts": jobs
+        }
+        save_job_details_to_db(db, "", linkedin_jobs, update=False)
+        data = { "completion_rate": 1,  "success_job_ids": [key], "status": 4}
+        _patch_data(data, GS_URL, task_id)
         return
+    else:
+        # Check if found jobs are already in DB and perform duplication check
+        new_jobs = []
+        stored_job_ids = []
+        for job in jobs:
+            if 'job_id' not in job:
+                job['job_id'] = crawler.get_job_id_by_url(job['url'])
+            if not job_exists(db, job['job_id']):
+                new_jobs.append(job)
+            else:
+                stored_job_types = get_job_type(db, job['job_id'])
+                if job_type not in stored_job_types:
+                    stored_job_types.append(job_type)
+                    current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+                    save_job_type_to_db(db, job['job_id'], stored_job_types, current_time)
+                    stored_job_ids.append(job['job_id'])
+        if len(new_jobs) == 0 and len(stored_job_ids) == 0:
+            logger.info("No new jobs are found.")
+            _patch_data({"status": 4}, GS_URL, task_id)
+            return
 
     # Parse webpage and save new job to DB
-    if company in ['google', 'uber']: 
+    if company in ["google", "uber"]: 
         # companies that skip parsing step
         for job in new_jobs:
             job["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")

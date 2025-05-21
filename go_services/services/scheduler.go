@@ -30,6 +30,10 @@ func ComposeEmailTask(taskIDs []string) {
 			"email":    user.Email,
 			"jobType":  userJobType,
 		}
+
+		// Create a set of jobIDs and aggregate them
+		companyJobSet := make(map[string]map[string]struct{})
+
 		for _, taskID := range taskIDs {
 			var task models.Task
 			result := database.DB.Where("task_id = ?", taskID).First(&task)
@@ -41,12 +45,29 @@ func ComposeEmailTask(taskIDs []string) {
 				continue
 			}
 			if strings.Contains(userCompanies, task.Company) && strings.Contains(userJobType, task.JobType) {
-				emailData[task.Company] = task.SuccessJobIDs
+				if _, exists := companyJobSet[task.Company]; !exists {
+					companyJobSet[task.Company] = make(map[string]struct{})
+				}
+				for _, jobID := range task.SuccessJobIDs {
+					companyJobSet[task.Company][jobID] = struct{}{}
+				}
 			}
 		}
+
+		// Convert set map to slice and store in emailData
+		for company, jobSet := range companyJobSet {
+			var jobList []string
+			for jobID := range jobSet {
+				jobList = append(jobList, jobID)
+			}
+			emailData[company] = jobList
+		}
+
+		// No job found if username, email, jobType only
 		if len(emailData) == 3 {
 			continue
 		}
+
 		StartEmailProducer(emailData)
 	}
 }

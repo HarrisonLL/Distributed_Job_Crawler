@@ -16,9 +16,16 @@ def save_job_url_to_db(db, job_id, url):
     init_dict = {'id': job_id, 'url': url}
     jobs_collection.insert_one(init_dict)
 
-def save_job_details_to_db(db, job_id, job_details):
+def save_job_details_to_db(db, job_id, job_details, update = True):
+    '''
+    params: 
+        update: True: update existing job data; False: insert job data
+    '''
     jobs_collection = db['jobs']
-    jobs_collection.update_one({'id': job_id}, {'$set': job_details})
+    if update:
+        jobs_collection.update_one({'id': job_id}, {'$set': job_details})
+    else:
+        jobs_collection.insert_one(job_details)
 
 def get_job_type(db, job_id):
     jobs_collection = db['jobs']
