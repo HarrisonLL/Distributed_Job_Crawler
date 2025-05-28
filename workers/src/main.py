@@ -1,7 +1,7 @@
 import datetime
 import argparse
 import os, json, requests, logging
-from crawlers import amazon, meta, google, uber, salesforce, linkedinPosts
+from crawlers import amazon, meta, google, uber, salesforce, linkedin_posts
 from typing import List
 from mongo_client import get_db, job_exists, save_job_url_to_db, save_job_details_to_db, save_job_type_to_db, get_job_type
 
@@ -15,7 +15,7 @@ def init_crawler(company: str, job_type: str, location: str):
         'google': google.google(job_type, location),
         'uber': uber.uber(job_type, location),
         'salesforce': salesforce.salesforce(job_type, location),
-        'linkedin_posts': linkedinPosts.linkedInPosts(job_type, location)
+        'linkedin_posts': linkedin_posts.linkedInPosts(job_type, location)
     }
     if company.lower() not in crawlers:
         raise ValueError('Current company not supported')

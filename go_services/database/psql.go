@@ -1,9 +1,9 @@
 package database
 
 import (
+	"go_services/config"
 	"go_services/models"
 	"log"
-	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -12,9 +12,9 @@ import (
 var DB *gorm.DB
 
 func Init() {
-	dsn := os.Getenv("POSTGRES_URL")
-	if dsn == "" {
-		log.Fatal("POSTGRES_URL is not set!")
+	dsn, getURLErr := config.GetURL("POSTGRES_URL")
+	if getURLErr != "" {
+		log.Fatal(getURLErr)
 	}
 	var err error
 	// Open the database connection

@@ -50,5 +50,4 @@ class linkedInPosts(Crawler):
                 }
                 jobs.append(job_data)
             time.sleep(5)
-        sorted_jobs = sorted(jobs, key=lambda x: (x['posting_date'], x['company']), reverse=True)
-        return sorted_jobs
+        return jobs

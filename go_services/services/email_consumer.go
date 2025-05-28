@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"go_services/database"
 	"go_services/utils"
 	"log"
 	"os"
@@ -11,25 +12,11 @@ import (
 
 	"github.com/streadway/amqp"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
-var mongoClient *mongo.Client
-
-func initMongoDB() {
-	var err error
-	mongoURI := os.Getenv("MONGOURL")
-	mongoClient, err = mongo.Connect(context.TODO(), options.Client().ApplyURI(mongoURI))
-	if err != nil {
-		log.Fatalf("Failed to connect to MongoDB: %v", err)
-	}
-}
 
 func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetail, error) {
 	dbName := fmt.Sprintf("%s_jobcrawler", strings.ToLower(company))
-	collection := mongoClient.Database(dbName).Collection("jobs")
-
+	collection := database.MongoClient.Database(dbName).Collection("jobs")
 	var jobs []utils.JobDetail
 
 	for _, jobID := range jobIDs {
@@ -81,7 +68,7 @@ func fetchJobDetailsFromMongo(jobIDs []string, company string) ([]utils.JobDetai
 }
 
 func StartEmailConsumer() {
-	initMongoDB()
+	database.InitMongoDB()
 	conn, err := amqp.Dial(os.Getenv("MQ_URL"))
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)

@@ -1,10 +1,11 @@
-package utils
+package config
 
 import (
 	"os"
 	"strconv"
 )
 
+// GetConcurrency returns the concurrency level from environment variables
 func GetConcurrency() int {
 	concurrency := 1
 	if val := os.Getenv("CONCURRENCY"); val != "" {
@@ -13,6 +14,7 @@ func GetConcurrency() int {
 	return concurrency
 }
 
+// GetMode returns the mode from environment variables
 func GetMode() string {
 	mode := "host"
 	if val := os.Getenv("MODE"); val != "" {
@@ -21,6 +23,7 @@ func GetMode() string {
 	return mode
 }
 
+// GetLocation returns the location from environment variables
 func GetLocation() string {
 	location := "USA"
 	if val := os.Getenv("LOCATION"); val != "" {
@@ -29,6 +32,7 @@ func GetLocation() string {
 	return location
 }
 
+// GetCrawlingTimeInterval returns the crawling time interval from environment variables
 func GetCrawlingTimeInterval() int {
 	timeInterval := 2
 	if val := os.Getenv("TIMEINTERVAL"); val != "" {
@@ -37,6 +41,7 @@ func GetCrawlingTimeInterval() int {
 	return timeInterval
 }
 
+// GetURL returns the URL for a given service from environment variables
 func GetURL(service string) (string, string) {
 	if val := os.Getenv(service); val != "" {
 		return val, ""

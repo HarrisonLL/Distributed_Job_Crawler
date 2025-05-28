@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"go_services/config"
 	"go_services/database"
 	"go_services/models"
 	"go_services/utils"
@@ -10,7 +11,9 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
+	"time"
 
+	"github.com/go-co-op/gocron"
 	"github.com/google/uuid"
 )
 
@@ -72,15 +75,15 @@ func ComposeEmailTask(taskIDs []string) {
 	}
 }
 
-func CrawlerTaskBase() {
-	concurrency := utils.GetConcurrency()
-	mode := utils.GetMode()
-	mongoURL, err := utils.GetURL("MONGOURL")
-	location := utils.GetLocation()
+func crawlerTaskBase() {
+	concurrency := config.GetConcurrency()
+	mode := config.GetMode()
+	mongoURL, err := config.GetURL("MONGOURL")
+	location := config.GetLocation()
 	if err != "" {
 		log.Fatalf("Failed to get MONGOURL: %v", err)
 	}
-	gsURL, err := utils.GetURL("GS_URL")
+	gsURL, err := config.GetURL("GS_URL")
 	if err != "" {
 		log.Fatalf("Failed to get GS_URL: %v", err)
 	}
@@ -174,4 +177,10 @@ func CrawlerTaskBase() {
 		// Send msg to email queue
 		ComposeEmailTask(taskIDs)
 	}
+}
+
+func StartScheduler() {
+	s := gocron.NewScheduler(time.UTC)
+	s.Every(config.GetCrawlingTimeInterval()).Hours().Do(crawlerTaskBase)
+	s.StartBlocking()
 }
