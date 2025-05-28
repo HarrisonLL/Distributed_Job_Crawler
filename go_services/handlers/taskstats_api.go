@@ -47,7 +47,7 @@ func GetTaskStats(c *gin.Context) {
 
 	startDateStr = startDate.Format("2006-01-02 15:04")
 	endDateStr = endDate.Format("2006-01-02 15:04")
-	taskQuery := database.DB.Where("date_time >= ? and date_time < ?", startDateStr, endDateStr)
+	taskQuery := database.DB.Where("date_time >= ? and date_time < ? and company != 'linkedin_posts'", startDateStr, endDateStr)
 	if jobType != "" {
 		taskQuery = taskQuery.Where("job_type = ?", jobType)
 	}

@@ -53,7 +53,9 @@ func UpdateTask(c *gin.Context) {
 	}
 	if len(updatedTask.SuccessJobIDs) > 0 {
 		task.SuccessJobIDs = updatedTask.SuccessJobIDs
-		task.NumbersOfJobs = len(updatedTask.SuccessJobIDs)
+	}
+	if updatedTask.NumbersOfJobs != 0 {
+		task.NumbersOfJobs = updatedTask.NumbersOfJobs
 	}
 
 	if err := database.DB.Save(&task).Error; err != nil {

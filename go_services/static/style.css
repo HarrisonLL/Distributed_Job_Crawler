@@ -18,11 +18,11 @@ body {
     height: 80vh;
 }
 .stats, .preferences {
-    width: 30%;
+    width: 40%;
     padding: 20px;
 }
 .stats {
-    width: 70%;
+    width: 60%;
     padding: 20px;
     border-right: 2px solid #ddd;
 }

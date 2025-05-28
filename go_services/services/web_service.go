@@ -22,6 +22,7 @@ func StartWeb() {
 	router.GET("/api/v1/tasks", handlers.GetTasks)
 	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
 	router.PATCH("/api/v1/tasks/:task_id", handlers.UpdateTask)
+	router.POST("/api/v1/compose_email_task", handlers.ComposeEmailTaskHandler)
 
 	// User api
 	router.POST("/api/v1/register", handlers.RegisterUser)

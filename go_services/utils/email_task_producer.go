@@ -1,4 +1,4 @@
-package services
+package utils
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func StartEmailProducer(emailData map[string]interface{}) {
+func ProduceEmailTasks(emailData map[string]interface{}) {
 	conn, err := amqp.Dial(os.Getenv("MQ_URL"))
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)

@@ -63,15 +63,6 @@
             <label>Email</label>
             <input v-model="userProfile.email" type="email" required>
 
-            <label>Years of Experience</label>
-            <select v-model="userProfile.yoe" required>
-              <option value="0-1">0-1</option>
-              <option value="1-2">1-2</option>
-              <option value="2-3">2-3</option>
-              <option value="3-5">3-5</option>
-              <option value="5+">5+</option>
-            </select>
-
             <label>Preferred Companies</label>
             <div v-for="company in companyList" :key="company">
               <label>

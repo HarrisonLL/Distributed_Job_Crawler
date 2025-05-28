@@ -47,10 +47,10 @@ def _crawl_individual_jobs(new_jobs:List[dict], stored_job_ids: List[str], GS_UR
                 success.append(job["job_id"])
             except Exception as e:
                 logger.error(e, exc_info=True)
-    success += stored_job_ids
     data = {
         "completion_rate": len(success) / len(new_jobs),
-        "success_job_ids": success,
+        "success_job_ids": success + stored_job_ids,
+        "numbers_of_jobs": len(success),
         "status": 4
     }
     _patch_data(data, GS_URL, task_id)
@@ -81,7 +81,7 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
             "job_posts": jobs
         }
         save_job_details_to_db(db, "", linkedin_jobs, update=False)
-        data = { "completion_rate": 1,  "success_job_ids": [key], "status": 4}
+        data = { "completion_rate": 1,  "success_job_ids": [key], "numbers_of_jobs":len(jobs), "status": 4}
         _patch_data(data, GS_URL, task_id)
         return
     else:
@@ -114,14 +114,14 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
             save_job_url_to_db(db, job["job_id"], job["url"])
             save_job_details_to_db(db, job["job_id"], job)
         ret_job_ids = [job["job_id"] for job in new_jobs] + stored_job_ids
-        data = { "completion_rate": 1,  "success_job_ids": ret_job_ids, "status": 4}
+        data = { "completion_rate": 1,  "success_job_ids": ret_job_ids, "numbers_of_jobs": len(new_jobs), "status": 4}
         _patch_data(data, GS_URL, task_id)
     else: 
         # companies that need parsing step
         if len(new_jobs) > 0:
             _crawl_individual_jobs(new_jobs, stored_job_ids, GS_URL, task_id, job_type, crawler, db)
         else:
-            data = { "completion_rate": 1,  "success_job_ids": stored_job_ids, "status": 4}
+            data = { "completion_rate": 1,  "success_job_ids": stored_job_ids, "numbers_of_jobs": 0, "status": 4}
             _patch_data(data, GS_URL, task_id)
 
 
