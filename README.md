@@ -5,7 +5,7 @@ The purpose is to learn multithreading in Golang and its Docker and K8S sdk.
 
 # System Architecture
 
-<img width="1504" alt="Screenshot 2025-03-02 at 2 26 00 PM" src="https://github.com/user-attachments/assets/b094fe86-9787-42dd-9a5f-458173e3f9ac" />
+<img width="785" alt="image" src="https://github.com/user-attachments/assets/2a6d5e08-312a-4005-9929-8d5f5346eac7" />
 
 
 ## Development
