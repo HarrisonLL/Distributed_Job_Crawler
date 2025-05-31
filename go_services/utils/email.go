@@ -47,6 +47,7 @@ func SendEmailByJobType(username, email, jobType string, jobsByCompany map[strin
 		"salesforce":     "#00A1E0",
 		"uber":           "#333333",
 		"linkedin_posts": "#0077B5",
+		"microsoft":      "#107C10",
 	}
 
 	var messageBody strings.Builder
@@ -62,8 +63,12 @@ func SendEmailByJobType(username, email, jobType string, jobsByCompany map[strin
 		messageBody.WriteString("<ul>\n")
 
 		for i, job := range jobs {
-			descriptionPreview := truncateText(job.Description, 600)
-			qualificationsPreview := truncateText(job.Qualifications, 600)
+			descriptionPreview := job.Description
+			qualificationsPreview := job.Qualifications
+			if company == "amazon" {
+				descriptionPreview = truncateText(job.Description, 600)
+				qualificationsPreview = truncateText(job.Qualifications, 600)
+			}
 
 			messageBody.WriteString("<li style=\"margin-bottom: 15px; font-size: 15px;\">\n")
 			messageBody.WriteString(fmt.Sprintf("<strong>Job Title:</strong> <a href=\"%s\" style=\"font-size: 15px;\">%s</a><br>\n", job.URL, job.Title))

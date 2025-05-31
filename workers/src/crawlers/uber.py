@@ -50,7 +50,7 @@ class uber(Crawler):
             data = response.json()
             results = data.get("data", {}).get("results", [])
             for job in results:
-                if self.job_type not in job["title"]:
+                if self.job_type.lower() not in job["title"].lower():
                     continue
                 job_id = str(job["id"])
                 jobs.append({
@@ -58,6 +58,7 @@ class uber(Crawler):
                     "title": job["title"],
                     "location": f"{job['location']['city']}, {job['location']['region']}",
                     "url": f"https://www.uber.com/global/en/careers/list/{job_id}/",
+                    "description": job.get("description", ""),
                     "department": job.get("department", ""),
                     "team": job.get("team", ""),
                     "created_at": job.get("creationDate", "")

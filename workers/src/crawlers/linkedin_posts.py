@@ -39,6 +39,8 @@ class linkedInPosts(Crawler):
                 if not (hiring_flag and 'Actively Hiring' in hiring_flag.text):
                     continue
                 title_elem = job.find('h3', class_='base-search-card__title')
+                if title_elem and "intern" in title_elem.get_text(strip=True).lower():
+                    continue
                 company_elem = job.find('h4', class_='base-search-card__subtitle')
                 link_elem = job.find('a', class_='base-card__full-link', href=True)
                 time_elem = job.find('time', class_='job-search-card__listdate')

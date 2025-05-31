@@ -11,11 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
           loginData: { username: "", password: "" },
           registerData: { username: "", password: "", confirmPassword: "" },
           userProfile: { email: "", yoe: "0-1", companies: [], jobTypes: [], emailSubscription: false },
-          companyList: ["amazon", "google", "meta", "salesforce", "uber", "linkedin_posts"],
+          companyList: ["amazon", "google", "meta", "microsoft", "salesforce", "uber", "linkedin_posts"],
           jobTypeList: ["software engineer", "machine learning engineer", "data scientist", "data analysis"],
           selectedJobType: "software engineer",
           chart: null,
-          companyColors: { "amazon": "#F79B1B", "google": "#F4B400", "meta": "#4267B2", "salesforce": "#00A1E0", "uber": "#333333"}
+          companyColors: { "amazon": "#F79B1B", "google": "#F4B400", "meta": "#4267B2", "microsoft": "#107C10", "salesforce": "#00A1E0", "uber": "#333333"}
         };
       },
       mounted() {
