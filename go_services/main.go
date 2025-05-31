@@ -9,13 +9,16 @@ import (
 )
 
 func main() {
-	serviceMode := flag.String("service", "", "Service mode: web, scheduler, emailConsumer, CLI")
+	serviceMode := flag.String("service", "", "Service mode: taskSvc, userSvc, scheduler, emailConsumer, CLI")
 	flag.Parse()
 
 	switch *serviceMode {
-	case "web":
+	case "taskSvc":
 		database.Init()
-		services.StartWeb()
+		services.StartTaskSvc()
+	case "userSvc":
+		database.InitUserSvc()
+		services.StartUserSvc()
 	case "scheduler":
 		database.Init()
 		services.StartScheduler()

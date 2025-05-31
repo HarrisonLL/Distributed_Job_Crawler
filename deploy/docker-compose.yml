@@ -27,6 +27,7 @@ services:
       POSTGRES_DB: gs_db
     volumes:
       - ${PWD}/postgres_data:/var/lib/postgresql/data
+      - ${PWD}/init-scripts:/docker-entrypoint-initdb.d
     networks:
       - jc_network
 
@@ -45,11 +46,26 @@ services:
     networks:
       - jc_network
 
-  goweb:
+  gousersvc:
     image: harrisonll/jc_gs:v1.2.0-linux
-    container_name: goweb
+    container_name: gousersvc
     restart: always
-    command: "./main --service=web" 
+    command: "./main --service=userSvc" 
+    ports:
+      - "8090:8090"
+    environment:
+      - POSTGRES_USER_MANAGER_URL="postgres://user_manager:secure_password@postgresdb:5432/gs_db?sslmode=disable"
+      - GS_URL="http://localhost:8080"
+    depends_on:
+      - postgresdb
+    networks:
+      - jc_network
+
+  gotasksvc:
+    image: harrisonll/jc_gs:v1.2.0-linux
+    container_name: gotasksvc
+    restart: always
+    command: "./main --service=taskSvc" 
     ports:
       - "8080:8080"
     env_file:

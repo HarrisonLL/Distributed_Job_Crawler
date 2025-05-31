@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
+	"go_services/config"
 	"go_services/database"
 	"go_services/models"
 	"go_services/utils"
@@ -146,4 +148,34 @@ func UpdateUserProfile(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "Profile updated successfully"})
+}
+
+func ExternalGetTaskStats(c *gin.Context) {
+	var stats []JobStats
+	gsURL, errMsg := config.GetURL("GS_URL")
+
+	if errMsg != "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to get GS_URL: %s", errMsg)})
+		return
+	}
+
+	query := c.Request.URL.RawQuery
+	resp, err := http.Get(fmt.Sprintf("%s/api/v1/tasks/stats?%s", gsURL, query))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to contact Task Service: %v", err)})
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Task Service responded with %d", resp.StatusCode)})
+		return
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&stats); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to parse task stats: %v", err)})
+		return
+	}
+
+	c.JSON(http.StatusOK, stats)
 }

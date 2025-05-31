@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
@@ -46,5 +47,5 @@ func GetURL(service string) (string, string) {
 	if val := os.Getenv(service); val != "" {
 		return val, ""
 	}
-	return "", "Value is not set"
+	return "", fmt.Sprintf("env variable %s is not set", service)
 }

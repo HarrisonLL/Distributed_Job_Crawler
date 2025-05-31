@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func StartWeb() {
+func StartUserSvc() {
 	router := gin.Default()
 	// Static web pages
 	router.Delims("[[", "]]")
@@ -18,20 +18,14 @@ func StartWeb() {
 		c.HTML(http.StatusOK, "index.html", nil)
 	})
 
-	// Task api
-	router.GET("/api/v1/tasks", handlers.GetTasks)
-	router.GET("/api/v1/tasks/:task_id", handlers.GetTaskByID)
-	router.PATCH("/api/v1/tasks/:task_id", handlers.UpdateTask)
-	router.POST("/api/v1/compose_email_task", handlers.ComposeEmailTaskHandler)
-
 	// User api
 	router.POST("/api/v1/register", handlers.RegisterUser)
 	router.POST("/api/v1/login", handlers.LoginUser)
 	router.GET("/api/v1/user_profile", handlers.GetUserProfile)
 	router.PATCH("/api/v1/update_profile", handlers.UpdateUserProfile)
-	router.GET("/api/v1/task_stats", handlers.GetTaskStats)
+	router.GET("/api/v1/task_stats", handlers.ExternalGetTaskStats)
 
-	if err := router.Run(":8080"); err != nil {
+	if err := router.Run(":8090"); err != nil {
 		log.Fatalf("Failed to start web server: %v", err)
 	}
 }
