@@ -76,7 +76,7 @@ func setupTTLForAllJobcrawlerDatabases() error {
 			// Fix string dates before setting up TTL
 			fixDatetimeFormat(dbName, collection, ctx)
 
-			ttlSeconds := int32(60 * 60 * 24 * 60) // 60 days
+			ttlSeconds := int32(60 * 60 * 24 * 90) // 90 days
 
 			// Drop existing index first
 			_, err = collection.Indexes().DropOne(ctx, "ttl_crawled_datetime")
