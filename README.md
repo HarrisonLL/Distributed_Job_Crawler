@@ -5,7 +5,7 @@ The purpose is to learn multithreading in Golang and its Docker and K8S sdk.
 
 # System Architecture
 
-<img width="785" alt="image" src="https://github.com/user-attachments/assets/2a6d5e08-312a-4005-9929-8d5f5346eac7" />
+![image](https://github.com/user-attachments/assets/6e8abb38-cf2f-4c1e-9e73-c56daec54f6f)
 
 
 ## Development
@@ -23,7 +23,8 @@ migrate -database 'postgres://admin:adminpass@localhost:5432/gs_db?sslmode=disab
 
 - start service
 ```
-go run main.go -service web
+go run main.go -service taskSvc
+go run main.go -service userSvc
 go run main.go -service scheduler
 go run main.go -service emailConsumer
 ```
