@@ -24,8 +24,7 @@ class google(Crawler):
             parsed = json.loads(json.loads(text)[0][2])
             return parsed[0] if parsed else []
         except Exception as e:
-            print(f"Failed to parse page {page_num}: {e}", flush=True)
-            return []
+            raise Exception(f"Failed to parse page {page_num}: {e}")
 
     @staticmethod
     def _clean_html(html: str) -> str:

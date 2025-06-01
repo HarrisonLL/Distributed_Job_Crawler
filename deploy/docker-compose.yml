@@ -46,26 +46,13 @@ services:
     networks:
       - jc_network
 
-  gousersvc:
-    image: harrisonll/jc_gs:v1.2.0-linux
-    container_name: gousersvc
-    restart: always
-    command: "./main --service=userSvc" 
-    ports:
-      - "8090:8090"
-    environment:
-      - POSTGRES_USER_MANAGER_URL="postgres://user_manager:secure_password@postgresdb:5432/gs_db?sslmode=disable"
-      - GS_URL="http://localhost:8080"
-    depends_on:
-      - postgresdb
-    networks:
-      - jc_network
-
   gotasksvc:
     image: harrisonll/jc_gs:v1.2.0-linux
     container_name: gotasksvc
     restart: always
     command: "./main --service=taskSvc" 
+    ports:
+      - "8080:8080"
     env_file:
       - .env
     depends_on:
@@ -75,6 +62,21 @@ services:
     volumes:
       - ${PWD}/worker_error_logs:/app/worker_error_logs
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - jc_network
+
+  gousersvc:
+    image: harrisonll/jc_gs:v1.2.0-linux
+    container_name: gousersvc
+    restart: always
+    command: "./main --service=userSvc" 
+    ports:
+      - "8090:8090"
+    environment:
+      - POSTGRES_USER_MANAGER_URL=${POSTGRES_USER_MANAGER_URL}
+      - GS_URL=${GS_URL}
+    depends_on:
+      - gotasksvc
     networks:
       - jc_network
 

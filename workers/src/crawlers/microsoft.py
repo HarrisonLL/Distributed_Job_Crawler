@@ -69,6 +69,4 @@ class microsoft(Crawler):
                     "description": description,
                     "location": location,
                 })
-                print(description)
-                print()
         return jobs
