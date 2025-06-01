@@ -76,7 +76,13 @@ func setupTTLForAllJobcrawlerDatabases() error {
 			// Fix string dates before setting up TTL
 			fixDatetimeFormat(dbName, collection, ctx)
 
-			ttlSeconds := int32(60 * 60 * 24 * 30) // 30 days
+			ttlSeconds := int32(60 * 60 * 24 * 60) // 60 days
+
+			// Drop existing index first
+			_, err = collection.Indexes().DropOne(ctx, "ttl_crawled_datetime")
+			if err != nil {
+				log.Printf("Note: Could not drop existing index for %s.jobs: %v", dbName, err)
+			}
 
 			// Create the TTL index
 			indexModel := mongo.IndexModel{
@@ -86,7 +92,7 @@ func setupTTLForAllJobcrawlerDatabases() error {
 					SetName("ttl_crawled_datetime"),
 			}
 
-			_, err := collection.Indexes().CreateOne(ctx, indexModel)
+			_, err = collection.Indexes().CreateOne(ctx, indexModel)
 			if err != nil {
 				log.Printf("Failed to create TTL index for %s.jobs: %v", dbName, err)
 			} else {
