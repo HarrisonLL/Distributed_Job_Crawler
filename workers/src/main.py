@@ -40,7 +40,7 @@ def _crawl_individual_jobs(new_jobs:List[dict], stored_job_ids: List[str], GS_UR
         if details is None or len(details.keys()) == 0:
             continue
         else: # only when success then save entry
-            details["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            details["crawled_datetime"] = datetime.datetime.now()
             details["job_types"] = [job_type]
             try:
                 save_job_url_to_db(db, job["job_id"], job["url"])
@@ -74,11 +74,12 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
         return
     
     if company == "linkedin_posts":
-        current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
-        key = f"{job_type}:{current_time}"
+        current_time = datetime.datetime.now()
+        time_str = current_time.strftime("%m/%d/%Y, %H:%M:%S")
+        key = f"{job_type}:{time_str}"
         linkedin_jobs = {
             "id": key,
-            "crawled_datetime":  current_time,
+            "crawled_datetime": current_time,
             "job_posts": jobs
         }
         save_job_details_to_db(db, "", linkedin_jobs, update=False)
@@ -98,7 +99,7 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
                 stored_job_types = get_job_type(db, job["job_id"])
                 if job_type not in stored_job_types:
                     stored_job_types.append(job_type)
-                    current_time = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+                    current_time = datetime.datetime.now()
                     save_job_type_to_db(db, job["job_id"], stored_job_types, current_time)
                     stored_job_ids.append(job["job_id"])
         if len(new_jobs) == 0 and len(stored_job_ids) == 0:
@@ -110,7 +111,7 @@ def process_task(company: str, job_type: str, location: str, task_id: str):
     if company in ["google", "uber", "microsoft"]: 
         # companies that skip parsing step
         for job in new_jobs:
-            job["crawled_datetime"] = datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S")
+            job["crawled_datetime"] = datetime.datetime.now()
             job["job_types"] = [job_type]
             save_job_url_to_db(db, job["job_id"], job["url"])
             save_job_details_to_db(db, job["job_id"], job)
