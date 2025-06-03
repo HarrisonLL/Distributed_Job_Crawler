@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"go_services/database"
 	"log"
 	"strings"
@@ -14,6 +15,24 @@ import (
 
 func convertStringDateToISODate(dateStr string) (time.Time, error) {
 	return time.Parse("01/02/2006, 15:04:05", dateStr)
+}
+
+// Helper function to list all indexes for a collection
+func listIndexes(collection *mongo.Collection, ctx context.Context, dbName string) {
+	indexes, err := collection.Indexes().List(ctx)
+	if err != nil {
+		log.Printf("Failed to list indexes for %s.jobs: %v", dbName, err)
+		return
+	}
+
+	for indexes.Next(ctx) {
+		var index bson.M
+		if err := indexes.Decode(&index); err != nil {
+			log.Printf("Failed to decode index: %v", err)
+			continue
+		}
+		fmt.Printf("  %v\n", index)
+	}
 }
 
 // Detecting old documents with string crawled_datetime
@@ -57,7 +76,7 @@ func fixDatetimeFormat(dbName string, collection *mongo.Collection, ctx context.
 	}
 }
 
-func setupTTLForAllJobcrawlerDatabases() error {
+func addUpdateTTLForAllJobcrawlerDatabases(days int) error {
 	database.InitMongoDB()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -72,16 +91,15 @@ func setupTTLForAllJobcrawlerDatabases() error {
 	for _, dbName := range dbs {
 		if strings.HasSuffix(dbName, "_jobcrawler") {
 			collection := client.Database(dbName).Collection("jobs")
-
-			// Fix string dates before setting up TTL
+			// Fix string dates before setting up TTL, this is for backward compatible
 			fixDatetimeFormat(dbName, collection, ctx)
-
-			ttlSeconds := int32(60 * 60 * 24 * 90) // 90 days
+			ttlSeconds := int32(60 * 60 * 24 * days)
 
 			// Drop existing index first
+			operation := "update"
 			_, err = collection.Indexes().DropOne(ctx, "ttl_crawled_datetime")
 			if err != nil {
-				log.Printf("Note: Could not drop existing index for %s.jobs: %v", dbName, err)
+				operation = "create"
 			}
 
 			// Create the TTL index
@@ -94,12 +112,56 @@ func setupTTLForAllJobcrawlerDatabases() error {
 
 			_, err = collection.Indexes().CreateOne(ctx, indexModel)
 			if err != nil {
-				log.Printf("Failed to create TTL index for %s.jobs: %v", dbName, err)
+				log.Printf("Failed to %s TTL index for %s.jobs: %v", operation, dbName, err)
 			} else {
-				log.Printf("TTL index created for %s.jobs", dbName)
+				operationPast := operation + "d"
+				log.Printf("TTL index %s to %d days for %s.jobs", operationPast, days, dbName)
 			}
 		}
 	}
 
+	return nil
+}
+
+func listTTLForAllJobcrawlerDatabases() error {
+	database.InitMongoDB()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	client := database.MongoClient
+	dbs, err := client.ListDatabaseNames(ctx, bson.D{})
+	if err != nil {
+		return err
+	}
+	for _, dbName := range dbs {
+		if strings.HasSuffix(dbName, "_jobcrawler") {
+			collection := client.Database(dbName).Collection("jobs")
+			log.Printf("Listing indexes for %s.jobs:", dbName)
+			listIndexes(collection, ctx, dbName)
+		}
+	}
+	return nil
+}
+
+func deleteTTLForAllJobcrawlerDatabases() error {
+	database.InitMongoDB()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	client := database.MongoClient
+	dbs, err := client.ListDatabaseNames(ctx, bson.D{})
+	if err != nil {
+		return err
+	}
+	for _, dbName := range dbs {
+		if strings.HasSuffix(dbName, "_jobcrawler") {
+			collection := client.Database(dbName).Collection("jobs")
+			log.Printf("Deleting TTL index for %s.jobs:", dbName)
+			_, err = collection.Indexes().DropOne(ctx, "ttl_crawled_datetime")
+			if err != nil {
+				log.Printf("Failed to delete TTL index for %s.jobs: %v", dbName, err)
+			} else {
+				log.Printf("TTL index deleted for %s.jobs", dbName)
+			}
+		}
+	}
 	return nil
 }

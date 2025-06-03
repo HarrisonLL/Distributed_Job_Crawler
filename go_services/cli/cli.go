@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 func RunCLI() {
@@ -41,12 +42,32 @@ func RunCLI() {
 			DockerImageName: args[3],
 		}
 		insertUpdateJobType(job)
-	case "setup_ttl":
-		if err := setupTTLForAllJobcrawlerDatabases(); err != nil {
+	case "add_update_ttl":
+		if len(args) != 2 {
+			fmt.Println("Add usage: go run main.go -service CLI add_update_ttl <days>")
+			os.Exit(1)
+		}
+		days, err := strconv.Atoi(args[1])
+		if err != nil {
+			fmt.Println("Invalid number of days.")
+			os.Exit(1)
+		}
+		if err := addUpdateTTLForAllJobcrawlerDatabases(days); err != nil {
 			fmt.Printf("Failed to set TTL indexes: %v\n", err)
 			os.Exit(1)
 		}
 		fmt.Println("TTL setup completed successfully.")
+	case "list_ttl":
+		if err := listTTLForAllJobcrawlerDatabases(); err != nil {
+			fmt.Printf("Failed to list TTL indexes: %v\n", err)
+			os.Exit(1)
+		}
+	case "delete_ttl":
+		if err := deleteTTLForAllJobcrawlerDatabases(); err != nil {
+			fmt.Printf("Failed to list TTL indexes: %v\n", err)
+			os.Exit(1)
+		}
+
 	default:
 		fmt.Printf("Unknown command: %s\n", command)
 		fmt.Println("Available commands: delete, add, setup_ttl")
