@@ -21,7 +21,7 @@ func RunCLI() {
 
 	command := args[0]
 	switch command {
-	case "delete":
+	case "delete_job_type":
 		if len(args) != 3 {
 			fmt.Println("Delete usage: go run main.go -service CLI delete <company_name> <job_type_name>")
 			os.Exit(1)
@@ -31,7 +31,7 @@ func RunCLI() {
 			JobTypeName: args[2],
 		}
 		deleteJobType(job)
-	case "add":
+	case "add_job_type":
 		if len(args) != 4 {
 			fmt.Println("Add usage: go run main.go -service CLI add <company_name> <job_type_name> <docker_image_name>")
 			os.Exit(1)
